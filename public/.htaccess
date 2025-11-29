@@ -1,0 +1,16 @@
+# Activar el motor de reescritura
+RewriteEngine On
+
+# Forward Authorization header to PHP
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
+
+# Establecer el directorio base (ajústalo si tu carpeta tiene otro nombre)
+RewriteBase /submate-backend/public/
+
+# Si el archivo o directorio solicitado no existe...
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# ...entonces redirigir la solicitud a index.php
+RewriteRule ^ index.php [QSA,L]

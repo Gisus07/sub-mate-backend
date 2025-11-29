@@ -1,0 +1,219 @@
+<?php
+
+/**
+ * API Routes - Centralized Routing
+ * 
+ * Todas las rutas del sistema consolidadas en un solo archivo.
+ * Los controladores manejan la autenticación internamente.
+ */
+
+use App\Controllers\AuthController;
+use App\Controllers\UsuarioController;
+use App\Controllers\SuscripcionController;
+use App\Controllers\SuscripcionOperacionesController;
+use App\Controllers\DashboardController;
+
+// =============================================================================
+// INSTANCIAR CONTROLADORES
+// =============================================================================
+
+$authController = new AuthController();
+$usuarioController = new UsuarioController();
+$suscripcionController = new SuscripcionController();
+$operacionesController = new SuscripcionOperacionesController();
+$dashboardController = new DashboardController();
+
+// =============================================================================
+// RUTA RAÍZ - Documentación de API
+// =============================================================================
+
+$router_ahjr->add_ahjr('GET', '/', function () {
+    Response::ok_ahjr([
+        "message" => "Bienvenido al backend de SubMate 🚀",
+        "version" => "2.0",
+        "endpoints" => [
+            "Auth" => [
+                "POST /api/auth/register" => "Registrar nuevo usuario",
+                "POST /api/auth/register-verify" => "Verificar código OTP de registro",
+                "POST /api/auth/register-resend" => "Reenviar código OTP",
+                "POST /api/auth/login" => "Iniciar sesión y obtener token JWT",
+                "POST /api/auth/logout" => "Cerrar sesión",
+                "GET /api/auth/me" => "Obtener usuario autenticado desde token",
+                "POST /api/auth/password-reset" => "Solicitar reset de contraseña",
+                "POST /api/auth/password-reset-verify" => "Verificar código y cambiar contraseña"
+            ],
+            "Usuario" => [
+                "PUT /api/perfil" => "Actualizar perfil del usuario autenticado",
+                "DELETE /api/perfil" => "Eliminar cuenta del usuario autenticado"
+            ],
+            "Suscripciones" => [
+                "GET /api/suscripciones" => "Listar suscripciones del usuario",
+                "POST /api/suscripciones" => "Crear nueva suscripción",
+                "GET /api/suscripciones/{id}" => "Obtener detalle de suscripción",
+                "PUT /api/suscripciones/{id}" => "Actualizar suscripción",
+                "DELETE /api/suscripciones/{id}" => "Eliminar suscripción",
+                "PATCH /api/suscripciones/{id}/estado" => "Cambiar estado (activa/inactiva)",
+                "POST /api/suscripciones/{id}/simular-pago" => "Simular pago (solo beta/admin)"
+            ],
+            "Dashboard" => [
+                "GET /api/dashboard" => "Obtener datos analíticos y gráficas"
+            ]
+        ]
+    ]);
+});
+
+// =============================================================================
+// AUTH MODULE - Autenticación y Registro
+// =============================================================================
+
+// POST /api/auth/register - Registro de nuevo usuario
+$router_ahjr->add_ahjr('POST', '/api/auth/register', function () use ($authController) {
+    $authController->register();
+});
+
+// POST /api/auth/login - Inicio de sesión
+$router_ahjr->add_ahjr('POST', '/api/auth/login', function () use ($authController) {
+    $authController->login();
+});
+
+// Alias para compatibilidad con rutas antiguas
+$router_ahjr->add_ahjr('POST', '/auth/login', function () use ($authController) {
+    $authController->login();
+});
+
+// GET /api/auth/me - Obtener usuario autenticado
+$router_ahjr->add_ahjr('GET', '/api/auth/me', function () use ($authController) {
+    $authController->me();
+});
+
+// POST /auth/logout - Cerrar sesión (ruta legacy)
+$router_ahjr->add_ahjr('POST', '/auth/logout', function () {
+    // Logout es manejado por el frontend (eliminar token)
+    Response::ok_ahjr(['message' => 'Sesión cerrada correctamente.']);
+});
+
+// POST /auth/register-verify - Verificar código OTP de registro
+$router_ahjr->add_ahjr('POST', '/auth/register-verify', function () {
+    // TODO: Implementar verificación de OTP si es necesaria
+    Response::ok_ahjr(['message' => 'Cuenta verificada correctamente.']);
+});
+
+// POST /auth/register-resend - Reenviar código OTP
+$router_ahjr->add_ahjr('POST', '/auth/register-resend', function () {
+    // TODO: Implementar reenvío de OTP si es necesario
+    Response::ok_ahjr(['message' => 'Código reenviado correctamente.']);
+});
+
+// POST /auth/password-reset - Solicitar reset de contraseña
+$router_ahjr->add_ahjr('POST', '/auth/password-reset', function () {
+    // TODO: Implementar solicitud de reset
+    Response::ok_ahjr(['message' => 'Email de recuperación enviado.']);
+});
+
+// POST /auth/password-reset-verify - Verificar código y cambiar contraseña
+$router_ahjr->add_ahjr('POST', '/auth/password-reset-verify', function () {
+    // TODO: Implementar verificación y cambio de contraseña
+    Response::ok_ahjr(['message' => 'Contraseña actualizada correctamente.']);
+});
+
+// GET /auth/session - Verificar sesión activa (legacy)
+$router_ahjr->add_ahjr('GET', '/auth/session', function () use ($authController) {
+    $authController->me();
+});
+
+// GET /auth/email-available - Validar disponibilidad de correo (legacy)
+$router_ahjr->add_ahjr('GET', '/auth/email-available', function () {
+    // TODO: Implementar validación de email disponible
+    Response::ok_ahjr(['disponible' => true]);
+});
+
+// =============================================================================
+// USUARIO MODULE - Gestión de Perfil
+// =============================================================================
+
+// PUT /api/perfil - Actualizar perfil del usuario autenticado
+$router_ahjr->add_ahjr('PUT', '/api/perfil', function () use ($usuarioController) {
+    $usuarioController->update();
+});
+
+// DELETE /api/perfil - Eliminar cuenta del usuario autenticado
+$router_ahjr->add_ahjr('DELETE', '/api/perfil', function () use ($usuarioController) {
+    $usuarioController->delete();
+});
+
+// =============================================================================
+// SUSCRIPCIONES MODULE - CRUD Estándar
+// =============================================================================
+
+// GET /api/suscripciones - Listar suscripciones del usuario
+$router_ahjr->add_ahjr('GET', '/api/suscripciones', function () use ($suscripcionController) {
+    $suscripcionController->index();
+});
+
+// POST /api/suscripciones - Crear nueva suscripción
+$router_ahjr->add_ahjr('POST', '/api/suscripciones', function () use ($suscripcionController) {
+    $suscripcionController->store();
+});
+
+// GET /api/suscripciones/{id} - Obtener detalle de suscripción
+$router_ahjr->add_ahjr('GET', '/api/suscripciones/(\d+)', function ($id) use ($suscripcionController) {
+    $suscripcionController->show((int) $id);
+});
+
+// PUT /api/suscripciones/{id} - Actualizar suscripción
+$router_ahjr->add_ahjr('PUT', '/api/suscripciones/(\d+)', function ($id) use ($suscripcionController) {
+    $suscripcionController->update((int) $id);
+});
+
+// DELETE /api/suscripciones/{id} - Eliminar suscripción
+$router_ahjr->add_ahjr('DELETE', '/api/suscripciones/(\d+)', function ($id) use ($suscripcionController) {
+    $suscripcionController->destroy((int) $id);
+});
+
+// =============================================================================
+// SUSCRIPCIONES OPERACIONES - Operaciones Especiales
+// =============================================================================
+
+// PATCH /api/suscripciones/{id}/estado - Cambiar estado (activa/inactiva)
+$router_ahjr->add_ahjr('PATCH', '/api/suscripciones/(\d+)/estado', function ($id) use ($operacionesController) {
+    $operacionesController->cambiarEstado((int) $id);
+});
+
+// POST /api/suscripciones/{id}/simular-pago - Simular pago (solo beta/admin)
+$router_ahjr->add_ahjr('POST', '/api/suscripciones/(\d+)/simular-pago', function ($id) use ($operacionesController) {
+    $operacionesController->simularPago((int) $id);
+});
+
+// =============================================================================
+// DASHBOARD MODULE - Analytics
+// =============================================================================
+
+// GET /api/dashboard - Obtener datos analíticos para gráficas
+$router_ahjr->add_ahjr('GET', '/api/dashboard', function () use ($dashboardController) {
+    $dashboardController->index();
+});
+
+// =============================================================================
+// LEGACY ROUTES - Compatibilidad con rutas antiguas
+// =============================================================================
+
+// Rutas de usuario legacy (mantener por compatibilidad)
+$router_ahjr->add_ahjr('GET', '/auth/usuario', function () {
+    Response::ok_ahjr(['message' => 'Ruta legacy - usar /api/perfil']);
+});
+
+$router_ahjr->add_ahjr('GET', '/auth/usuario/(\d+)', function ($id) {
+    Response::ok_ahjr(['message' => 'Ruta legacy - usar /api/perfil']);
+});
+
+$router_ahjr->add_ahjr('PUT', '/auth/usuario/(\d+)', function ($id) {
+    Response::ok_ahjr(['message' => 'Ruta legacy - usar /api/perfil']);
+});
+
+$router_ahjr->add_ahjr('DELETE', '/auth/usuario/(\d+)', function ($id) {
+    Response::ok_ahjr(['message' => 'Ruta legacy - usar /api/perfil']);
+});
+
+$router_ahjr->add_ahjr('PUT', '/auth/usuario/(\d+)/rol', function ($id) {
+    Response::ok_ahjr(['message' => 'Ruta legacy - funcionalidad movida']);
+});
