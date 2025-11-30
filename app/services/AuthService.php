@@ -84,6 +84,21 @@ class AuthService
         // Generar JWT
         $token = $this->generarJWT($usuarioLimpio);
 
+        // Configurar Cookie Segura (Dual Auth)
+        $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+        setcookie(
+            'sm_session',
+            $token,
+            [
+                'expires' => time() + $this->jwtExpiration,
+                'path' => '/',
+                'domain' => '', // Current domain
+                'secure' => $secure,
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]
+        );
+
         return [
             'usuario' => $usuarioLimpio,
             'token' => $token

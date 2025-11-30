@@ -1,4 +1,7 @@
 <?php
+
+namespace App\Core;
+
 class Auth
 {
     private static function b64e_ahjr($data_ahjr)

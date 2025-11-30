@@ -81,14 +81,18 @@ class AuthMiddleware
 
         $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
 
-        if (empty($authHeader)) {
-            throw new Exception('Token de autenticación requerido.', 401);
+        // 1. Intentar Header Authorization
+        if (!empty($authHeader)) {
+            if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
+                return $matches[1];
+            }
         }
 
-        if (!preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            throw new Exception('Formato de token inválido. Use: Bearer {token}', 401);
+        // 2. Intentar Cookie (Dual Auth)
+        if (isset($_COOKIE['sm_session']) && !empty($_COOKIE['sm_session'])) {
+            return $_COOKIE['sm_session'];
         }
 
-        return $matches[1];
+        throw new Exception('Token de autenticación requerido.', 401);
     }
 }

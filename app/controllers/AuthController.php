@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Services\AuthService;
+use App\Services\UsuarioService;
 use Exception;
 
 /**
@@ -15,10 +16,12 @@ use Exception;
 class AuthController
 {
     private AuthService $authService;
+    private UsuarioService $usuarioService;
 
     public function __construct()
     {
         $this->authService = new AuthService();
+        $this->usuarioService = new UsuarioService();
     }
 
     /**
@@ -85,6 +88,30 @@ class AuthController
     }
 
     /**
+     * POST /api/auth/logout
+     * Cerrar sesión y limpiar cookie
+     */
+    public function logout(): void
+    {
+        // Limpiar cookie
+        $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+        setcookie(
+            'sm_session',
+            '',
+            [
+                'expires' => time() - 3600,
+                'path' => '/',
+                'domain' => '',
+                'secure' => $secure,
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]
+        );
+
+        $this->responder(['message' => 'Sesión cerrada correctamente.']);
+    }
+
+    /**
      * GET /api/auth/me
      * Obtiene usuario autenticado desde token
      */
@@ -94,11 +121,15 @@ class AuthController
             $token = $this->extraerToken();
             $payload = $this->authService->validarToken($token);
 
+            // Obtener perfil completo desde DB
+            $usuarioCompleto = $this->usuarioService->obtenerPerfil($payload['sub']);
+
             $this->responder([
-                'usuario' => [
-                    'id' => $payload['sub'],
-                    'email' => $payload['email'],
-                    'rol' => $payload['rol']  // Incluido en el JWT
+                'status' => 200,
+                'success' => true,
+                'data' => [
+                    'usuario' => $usuarioCompleto,
+                    'token' => $token
                 ]
             ]);
         } catch (Exception $e) {
@@ -119,8 +150,14 @@ class AuthController
         $headers = getallheaders();
         $auth = $headers['Authorization'] ?? $headers['authorization'] ?? '';
 
+        // 1. Intentar Header
         if (preg_match('/Bearer\s+(.*)$/i', $auth, $matches)) {
             return $matches[1];
+        }
+
+        // 2. Intentar Cookie
+        if (isset($_COOKIE['sm_session']) && !empty($_COOKIE['sm_session'])) {
+            return $_COOKIE['sm_session'];
         }
 
         throw new Exception('Token requerido.', 401);

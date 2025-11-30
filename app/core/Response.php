@@ -1,4 +1,7 @@
 <?php
+
+namespace App\Core;
+
 class Response
 {
     public static function json_ahjr($data_ahjr = [], int $status_ahjr = 200): void

@@ -7,6 +7,22 @@
  */
 
 // =============================================================================
+// CORE DEPENDENCIES & AUTOLOAD
+// =============================================================================
+
+// Cargar autoloader de Composer PRIMERO
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    require_once __DIR__ . '/../vendor/autoload.php';
+} else {
+    // Fallback crítico si no hay autoloader
+    die('Error: No se encontró vendor/autoload.php. Ejecuta "composer install".');
+}
+
+use App\Core\Env;
+use App\Core\Database;
+use App\Core\Router;
+
+// =============================================================================
 // CORS CONFIGURATION
 // =============================================================================
 
@@ -24,31 +40,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // =============================================================================
-// CORE DEPENDENCIES
+// INITIALIZATION
 // =============================================================================
-
-require_once __DIR__ . '/../app/core/Response.php';
-require_once __DIR__ . '/../app/core/Router.php';
-require_once __DIR__ . '/../app/core/Auth.php';
-require_once __DIR__ . '/../app/core/Env.php';
-require_once __DIR__ . '/../app/core/Database.php';
-
-use App\Core\Env;
-use App\Core\Database;
 
 // Cargar variables de entorno
 Env::loadEnv(__DIR__ . '/..');
-
-// Cargar autoloader de Composer si existe
-if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
-    require_once __DIR__ . '/../vendor/autoload.php';
-}
-
-require_once __DIR__ . '/../app/core/Mailer.php';
-
-// =============================================================================
-// INITIALIZATION
-// =============================================================================
 
 // Inicializar base de datos (Singleton)
 $database_ahjr = Database::getInstance();

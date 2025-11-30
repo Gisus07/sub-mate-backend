@@ -95,11 +95,12 @@ class Env
             return; // Ya fue cargado anteriormente
         }
 
+        // Verificar si existe el archivo .env antes de intentar cargarlo
         if (!file_exists($path . DIRECTORY_SEPARATOR . '.env')) {
-            throw new RuntimeException(
-                "El archivo .env no existe en la ruta: {$path}. " .
-                    "Por favor, copia .env.example a .env y configura las variables necesarias."
-            );
+            // Si no existe, no lanzamos error fatal, solo advertimos o continuamos
+            // Esto permite que el sistema arranque y use valores por defecto si es necesario
+            error_log("Advertencia: No se encontró el archivo .env en {$path}");
+            return;
         }
 
         try {
@@ -107,11 +108,10 @@ class Env
             $this->dotenv->load();
             $this->loaded = true;
         } catch (\Throwable $e) {
-            throw new RuntimeException(
-                "Error al cargar el archivo .env: " . $e->getMessage(),
-                0,
-                $e
-            );
+            // Capturamos cualquier error de Dotenv para no detener la ejecución abruptamente
+            error_log("Error al cargar Dotenv: " . $e->getMessage());
+            // Opcional: lanzar una excepción controlada si es crítico
+            // throw new RuntimeException("Error crítico cargando variables de entorno", 0, $e);
         }
     }
 
