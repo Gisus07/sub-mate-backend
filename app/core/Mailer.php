@@ -18,10 +18,6 @@ class Mailer
     public static function sendEmail(string $to, string $subject, string $bodyHTML): bool
     {
         if (!class_exists(PHPMailer::class)) {
-            // Si no está PHPMailer, loguear o lanzar error. 
-            // Para mantener compatibilidad con Response::serverError_ahjr, lo usamos si estamos en contexto HTTP,
-            // pero Mailer podría usarse en CLI (worker).
-            // Retornamos false si falla la dependencia.
             error_log('PHPMailer no instalado');
             return false;
         }
@@ -49,6 +45,15 @@ class Mailer
             $mail->SMTPSecure = $secure;
             $mail->Port = (int)$port;
             $mail->CharSet = 'UTF-8';
+
+            // SMTP Debugging - Activar con SMTP_DEBUG=true en .env
+            $debugMode = getenv('SMTP_DEBUG');
+            if ($debugMode === 'true' || $debugMode === '1') {
+                $mail->SMTPDebug = 2; // Nivel 2: Muestra comunicación cliente/servidor
+                $mail->Debugoutput = 'error_log'; // Envía output a error_log de PHP
+            } else {
+                $mail->SMTPDebug = 0; // Modo silencioso
+            }
 
             $mail->setFrom($from, $fromName);
             $mail->addAddress($to);

@@ -32,7 +32,13 @@ class AlertsService
         // Sin CTA
 
         $html = Mailer::generarTemplateHTML($title, $message);
-        return Mailer::sendEmail($email, "Bienvenido a SubMate", $html);
+
+        try {
+            return Mailer::sendEmail($email, "Bienvenido a SubMate", $html);
+        } catch (Exception $e) {
+            error_log("AlertsService::enviarRegistroExitoso - Fallo al enviar correo: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -49,7 +55,13 @@ class AlertsService
         $message = "Has registrado correctamente una nueva suscripción. Te avisaremos antes de tu próximo pago.";
 
         $html = Mailer::generarTemplateHTML($title, $message);
-        return Mailer::sendEmail($usuario['email_ahjr'], "Nueva Suscripción Registrada", $html);
+
+        try {
+            return Mailer::sendEmail($usuario['email_ahjr'], "Nueva Suscripción Registrada", $html);
+        } catch (Exception $e) {
+            error_log("AlertsService::enviarSuscripcionCreada - Fallo al enviar correo: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -66,7 +78,13 @@ class AlertsService
         $message = "Los detalles de tu suscripción a <strong>{$nombreServicio}</strong> han sido modificados exitosamente.";
 
         $html = Mailer::generarTemplateHTML($title, $message);
-        return Mailer::sendEmail($usuario['email_ahjr'], "Actualización de Suscripción - {$nombreServicio}", $html);
+
+        try {
+            return Mailer::sendEmail($usuario['email_ahjr'], "Actualización de Suscripción - {$nombreServicio}", $html);
+        } catch (Exception $e) {
+            error_log("AlertsService::enviarSuscripcionEditada - Fallo al enviar correo: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -83,7 +101,13 @@ class AlertsService
         $message = "Has desactivado los recordatorios para <strong>{$nombreServicio}</strong>. No recibirás más alertas de pago para este servicio hasta que lo reactives.";
 
         $html = Mailer::generarTemplateHTML($title, $message);
-        return Mailer::sendEmail($usuario['email_ahjr'], "Suscripción Desactivada - {$nombreServicio}", $html);
+
+        try {
+            return Mailer::sendEmail($usuario['email_ahjr'], "Suscripción Desactivada - {$nombreServicio}", $html);
+        } catch (Exception $e) {
+            error_log("AlertsService::enviarSuscripcionDesactivada - Fallo al enviar correo: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -105,7 +129,13 @@ class AlertsService
         $message = "Tu pago de <strong>\${$monto}</strong> para <strong>{$nombreServicio}</strong> vence en <strong>{$diasRestantes} días</strong>. Asegúrate de tener fondos disponibles.";
 
         $html = Mailer::generarTemplateHTML($title, $message);
-        return Mailer::sendEmail($usuario['email_ahjr'], "Recordatorio de Pago: {$nombreServicio}", $html);
+
+        try {
+            return Mailer::sendEmail($usuario['email_ahjr'], "Recordatorio de Pago: {$nombreServicio}", $html);
+        } catch (Exception $e) {
+            error_log("AlertsService::enviarRecordatorio - Fallo al enviar correo: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -122,7 +152,13 @@ class AlertsService
         $message = "Has eliminado permanentemente la suscripción a <strong>{$nombreServicio}</strong>. Ya no recibirás notificaciones sobre este servicio.";
 
         $html = Mailer::generarTemplateHTML($title, $message);
-        return Mailer::sendEmail($usuario['email_ahjr'], "Suscripción Eliminada - {$nombreServicio}", $html);
+
+        try {
+            return Mailer::sendEmail($usuario['email_ahjr'], "Suscripción Eliminada - {$nombreServicio}", $html);
+        } catch (Exception $e) {
+            error_log("AlertsService::enviarSuscripcionEliminada - Fallo al enviar correo: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -139,7 +175,13 @@ class AlertsService
         $message = "¡Excelente! Has reactivado los recordatorios para <strong>{$nombreServicio}</strong>. Te avisaremos antes de tu próximo pago.";
 
         $html = Mailer::generarTemplateHTML($title, $message);
-        return Mailer::sendEmail($usuario['email_ahjr'], "Suscripción Reactivada - {$nombreServicio}", $html);
+
+        try {
+            return Mailer::sendEmail($usuario['email_ahjr'], "Suscripción Reactivada - {$nombreServicio}", $html);
+        } catch (Exception $e) {
+            error_log("AlertsService::enviarSuscripcionActivada - Fallo al enviar correo: " . $e->getMessage());
+            return false;
+        }
     }
 
     // --- Helper ---

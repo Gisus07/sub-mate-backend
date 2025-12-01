@@ -12,6 +12,7 @@ use App\controllers\UsuarioController;
 use App\controllers\SuscripcionController;
 use App\controllers\SuscripcionOperacionesController;
 use App\controllers\DashboardController;
+use App\controllers\DebugController;
 use App\core\Response;
 
 // =============================================================================
@@ -23,6 +24,7 @@ $usuarioController = new UsuarioController();
 $suscripcionController = new SuscripcionController();
 $operacionesController = new SuscripcionOperacionesController();
 $dashboardController = new DashboardController();
+$debugController = new DebugController();
 
 // =============================================================================
 // RUTA RAÍZ - Documentación de API
@@ -241,4 +243,9 @@ $router_ahjr->add_ahjr('POST', '/api/debug/run-worker', function () {
         'output' => $output,
         'exit_code' => $returnVar
     ]);
+});
+
+// POST /api/debug/test-email - Enviar correo de prueba SMTP
+$router_ahjr->add_ahjr('POST', '/api/debug/test-email', function () use ($debugController) {
+    $debugController->testEmail();
 });
