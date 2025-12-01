@@ -10,7 +10,7 @@ require_once __DIR__ . '/../app/core/Database.php';
 require_once __DIR__ . '/../app/models/DashboardModel.php';
 require_once __DIR__ . '/../app/services/DashboardService.php';
 
-use App\Core\Env;
+use App\core\Env;
 use App\Services\DashboardService;
 use App\Models\DashboardModel;
 

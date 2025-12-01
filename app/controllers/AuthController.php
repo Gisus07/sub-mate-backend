@@ -6,7 +6,7 @@ namespace App\Controllers;
 
 use App\Services\AuthService;
 use App\Services\UsuarioService;
-use App\Core\Response;
+use App\core\Response;
 use Exception;
 
 /**

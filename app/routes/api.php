@@ -12,7 +12,7 @@ use App\Controllers\UsuarioController;
 use App\Controllers\SuscripcionController;
 use App\Controllers\SuscripcionOperacionesController;
 use App\Controllers\DashboardController;
-use App\Core\Response;
+use App\core\Response;
 
 // =============================================================================
 // INSTANCIAR CONTROLADORES

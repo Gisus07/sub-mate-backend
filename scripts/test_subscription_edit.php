@@ -4,7 +4,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Services\SuscripcionService;
 use App\Models\UsuarioModel;
-use App\Core\Database;
+use App\core\Database;
 
 // Helper to print colored output
 function printColor($text, $color = '37')

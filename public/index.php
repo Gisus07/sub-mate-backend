@@ -18,9 +18,9 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
     die('Error: No se encontró vendor/autoload.php. Ejecuta "composer install".');
 }
 
-use App\Core\Env;
-use App\Core\Database;
-use App\Core\Router;
+use App\core\Env;
+use App\core\Database;
+use App\core\Router;
 
 // =============================================================================
 // CORS CONFIGURATION

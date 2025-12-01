@@ -3,7 +3,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
-use App\Core\Database;
+use App\core\Database;
 
 try {
     $db = Database::getDB();

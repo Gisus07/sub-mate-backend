@@ -16,15 +16,15 @@
 // Cargar autoload de Composer
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// Cargar variables de entorno usando App\Core\Env
-App\Core\Env::loadEnv(__DIR__ . '/..');
+// Cargar variables de entorno usando App\core\Env
+App\core\Env::loadEnv(__DIR__ . '/..');
 
 // Obtener configuración desde variables de entorno
-$host_ahjr = App\Core\Env::getRequired('DB_HOST');
-$db_ahjr = App\Core\Env::getRequired('DB_NAME');
-$user_ahjr = App\Core\Env::getRequired('DB_USER');
-$pass_ahjr = App\Core\Env::get('DB_PASS', '');
-$port_ahjr = App\Core\Env::get('DB_PORT', '3306');
+$host_ahjr = App\core\Env::getRequired('DB_HOST');
+$db_ahjr = App\core\Env::getRequired('DB_NAME');
+$user_ahjr = App\core\Env::getRequired('DB_USER');
+$pass_ahjr = App\core\Env::get('DB_PASS', '');
+$port_ahjr = App\core\Env::get('DB_PORT', '3306');
 
 // Configuración de PDO
 $options_ahjr = [
@@ -294,8 +294,8 @@ try {
     echo "► Verificando/Insertando usuarios de prueba...\n";
 
     // Usuario 1: Admin
-    $admin_email = App\Core\Env::get('ADMIN_EMAIL', 'admin@submate.app');
-    $admin_pass = App\Core\Env::get('ADMIN_PASSWORD', 'Admin123!');
+    $admin_email = App\core\Env::get('ADMIN_EMAIL', 'admin@submate.app');
+    $admin_pass = App\core\Env::get('ADMIN_PASSWORD', 'Admin123!');
 
     $stmt_check = $pdo_ahjr->prepare("SELECT id_ahjr FROM td_usuarios_ahjr WHERE email_ahjr = :email");
     $stmt_check->execute(['email' => $admin_email]);

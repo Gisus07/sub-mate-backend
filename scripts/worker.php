@@ -10,7 +10,7 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use Dotenv\Dotenv;
-use App\Core\Database;
+use App\core\Database;
 use App\Services\AlertsService;
 
 // Cargar variables de entorno

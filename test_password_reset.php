@@ -4,7 +4,7 @@ require 'vendor/autoload.php';
 use App\Services\AuthService;
 use App\Models\UsuarioOTPModel;
 use App\Models\UsuarioModel;
-use App\Core\Database;
+use App\core\Database;
 
 // Mock environment
 if (!isset($_ENV['JWT_SECRET'])) {

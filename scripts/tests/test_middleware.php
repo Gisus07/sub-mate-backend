@@ -9,8 +9,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use App\Core\Env;
-use App\Core\AuthMiddleware;
+use App\core\Env;
+use App\core\AuthMiddleware;
 use App\Services\AuthService;
 
 Env::loadEnv(__DIR__ . '/..');

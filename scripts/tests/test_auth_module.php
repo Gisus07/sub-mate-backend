@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use App\Core\Env;
+use App\core\Env;
 use App\Models\UsuarioModel;
 use App\Services\AuthService;
 

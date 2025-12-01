@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Core\Mailer;
+use App\core\Mailer;
 use App\Models\UsuarioModel;
 use Exception;
 

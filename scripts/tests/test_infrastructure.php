@@ -12,7 +12,7 @@ declare(strict_types=1);
 // Cargar autoloader de Composer
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use App\Core\Env;
+use App\core\Env;
 use App\Config\Database;
 
 echo "=== Prueba de Capa de Infraestructura ===\n\n";

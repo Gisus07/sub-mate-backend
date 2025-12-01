@@ -5,7 +5,7 @@ $dotenv->load();
 
 use App\Services\SuscripcionService;
 use App\Services\AlertsService;
-use App\Core\Database;
+use App\core\Database;
 
 try {
     $db = Database::getDB();

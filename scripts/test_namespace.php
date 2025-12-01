@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Core;
+namespace App\core;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-echo "Testing PHPMailer in App\\Core namespace...\n";
+echo "Testing PHPMailer in App\\core namespace...\n";
 
 // Test 1: class_exists with string (no leading backslash in string)
 if (class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {

@@ -4,7 +4,7 @@ $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
 use App\Services\SuscripcionOperacionesService;
-use App\Core\Database;
+use App\core\Database;
 
 try {
     $db = Database::getDB();

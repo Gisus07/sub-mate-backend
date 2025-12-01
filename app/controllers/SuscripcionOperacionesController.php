@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Services\SuscripcionOperacionesService;
-use App\Core\AuthMiddleware;
-use App\Core\Response;
+use App\core\AuthMiddleware;
+use App\core\Response;
 use Exception;
 
 /**

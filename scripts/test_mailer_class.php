@@ -1,13 +1,13 @@
 <?php
 require __DIR__ . '/../vendor/autoload.php';
 
-use App\Core\Mailer;
+use App\core\Mailer;
 
 try {
     if (class_exists(Mailer::class)) {
-        echo "App\\Core\\Mailer class exists.\n";
+        echo "App\\core\\Mailer class exists.\n";
     } else {
-        echo "App\\Core\\Mailer class NOT found.\n";
+        echo "App\\core\\Mailer class NOT found.\n";
     }
 
     // Check if we can call a method (it will fail due to missing env/params, but we want to see if it crashes on class load)
