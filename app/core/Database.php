@@ -61,12 +61,17 @@ class Database
     private function connect(): void
     {
         try {
-            $host = $_ENV['DB_HOST'] ?? 'localhost';
-            $db = $_ENV['DB_NAME'] ?? 'db_submate_ahjr';
-            $user = $_ENV['DB_USER'] ?? 'root';
-            $pass = $_ENV['DB_PASS'] ?? '';
+            $host = Env::get('DB_HOST');
+            $db = Env::get('DB_NAME');
+            $user = Env::get('DB_USER');
+            $pass = Env::get('DB_PASS');
+            $port = Env::get('DB_PORT');
 
-            $dsn = "mysql:host={$host};dbname={$db};charset=utf8mb4";
+            if (!$host) {
+                throw new RuntimeException("Error Crítico: Variables de entorno de base de datos no configuradas.");
+            }
+
+            $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
 
             $this->connection = new PDO($dsn, $user, $pass, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,

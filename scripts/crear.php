@@ -16,15 +16,15 @@
 // Cargar autoload de Composer
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// Cargar variables de entorno
-$dotenv_ahjr = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv_ahjr->load();
+// Cargar variables de entorno usando App\Core\Env
+App\Core\Env::loadEnv(__DIR__ . '/..');
 
 // Obtener configuración desde variables de entorno
-$host_ahjr = $_ENV['DB_HOST'] ?? 'localhost';
-$db_ahjr = $_ENV['DB_NAME'] ?? 'db_submate_ahjr';
-$user_ahjr = $_ENV['DB_USER'] ?? 'root';
-$pass_ahjr = $_ENV['DB_PASS'] ?? '';
+$host_ahjr = App\Core\Env::getRequired('DB_HOST');
+$db_ahjr = App\Core\Env::getRequired('DB_NAME');
+$user_ahjr = App\Core\Env::getRequired('DB_USER');
+$pass_ahjr = App\Core\Env::get('DB_PASS', '');
+$port_ahjr = App\Core\Env::get('DB_PORT', '3306');
 
 // Configuración de PDO
 $options_ahjr = [
@@ -37,18 +37,18 @@ try {
 
     // Conexión inicial al servidor MySQL
     echo "► Conectando al servidor MySQL...\n";
-    $pdoServer_ahjr = new PDO("mysql:host={$host_ahjr};charset=utf8mb4", $user_ahjr, $pass_ahjr, $options_ahjr);
+    $pdoServer_ahjr = new PDO("mysql:host={$host_ahjr};port={$port_ahjr};charset=utf8mb4", $user_ahjr, $pass_ahjr, $options_ahjr);
     echo "✓ Conexión al servidor exitosa\n\n";
 
     // Crear base de datos si no existe
     echo "► Verificando base de datos '{$db_ahjr}'...\n";
     try {
-        $pdo_ahjr = new PDO("mysql:host={$host_ahjr};dbname={$db_ahjr};charset=utf8mb4", $user_ahjr, $pass_ahjr, $options_ahjr);
+        $pdo_ahjr = new PDO("mysql:host={$host_ahjr};port={$port_ahjr};dbname={$db_ahjr};charset=utf8mb4", $user_ahjr, $pass_ahjr, $options_ahjr);
         echo "✓ Base de datos ya existe\n\n";
     } catch (PDOException $e) {
         echo "  Creando base de datos '{$db_ahjr}'...\n";
         $pdoServer_ahjr->exec("CREATE DATABASE `{$db_ahjr}` DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_unicode_ci");
-        $pdo_ahjr = new PDO("mysql:host={$host_ahjr};dbname={$db_ahjr};charset=utf8mb4", $user_ahjr, $pass_ahjr, $options_ahjr);
+        $pdo_ahjr = new PDO("mysql:host={$host_ahjr};port={$port_ahjr};dbname={$db_ahjr};charset=utf8mb4", $user_ahjr, $pass_ahjr, $options_ahjr);
         echo "✓ Base de datos creada exitosamente\n\n";
     }
 
@@ -294,20 +294,23 @@ try {
     echo "► Verificando/Insertando usuarios de prueba...\n";
 
     // Usuario 1: Admin
+    $admin_email = App\Core\Env::get('ADMIN_EMAIL', 'admin@submate.app');
+    $admin_pass = App\Core\Env::get('ADMIN_PASSWORD', 'Admin123!');
+
     $stmt_check = $pdo_ahjr->prepare("SELECT id_ahjr FROM td_usuarios_ahjr WHERE email_ahjr = :email");
-    $stmt_check->execute(['email' => 'admin@submate.app']);
+    $stmt_check->execute(['email' => $admin_email]);
 
     if (!$stmt_check->fetch()) {
-        $hash_admin = password_hash('Admin123!', PASSWORD_BCRYPT);
+        $hash_admin = password_hash($admin_pass, PASSWORD_BCRYPT);
         $pdo_ahjr->prepare("INSERT INTO td_usuarios_ahjr (nombre_ahjr, apellido_ahjr, email_ahjr, clave_ahjr, estado_ahjr, rol_ahjr)
                             VALUES (:nombre, :apellido, :email, :clave, 'activo', 'admin')")
             ->execute([
                 'nombre' => 'Admin',
                 'apellido' => 'SubMate',
-                'email' => 'admin@submate.app',
+                'email' => $admin_email,
                 'clave' => $hash_admin
             ]);
-        echo "  ✓ Usuario admin@submate.app creado\n";
+        echo "  ✓ Usuario $admin_email creado\n";
     }
 
     // Usuario 2: Beta (con suscripciones y historial)
@@ -408,7 +411,7 @@ try {
     echo "Stored Procedures: 1\n";
     echo "  - sp_crear_suscripcion_ahjr\n\n";
     echo "Usuarios de prueba: 3\n";
-    echo "  1. admin@submate.app (admin) - Pass: Admin123!\n";
+    echo "  1. {$admin_email} (admin) - Pass: [PROTECTED]\n";
     echo "  2. beta@submate.app (beta) - Pass: Beta123!\n";
     echo "  3. usuario@submate.app (user) - Pass: User123!\n";
     echo "==============================================\n";

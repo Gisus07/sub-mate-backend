@@ -97,9 +97,8 @@ class Env
 
         // Verificar si existe el archivo .env antes de intentar cargarlo
         if (!file_exists($path . DIRECTORY_SEPARATOR . '.env')) {
-            // Si no existe, no lanzamos error fatal, solo advertimos o continuamos
-            // Esto permite que el sistema arranque y use valores por defecto si es necesario
-            error_log("Advertencia: No se encontró el archivo .env en {$path}");
+            // En producción (Railway), las variables se cargan del sistema.
+            // Si no hay .env, asumimos que estamos en ese entorno y no hacemos nada.
             return;
         }
 
