@@ -40,11 +40,38 @@ use App\core\Router;
 // CORS CONFIGURATION
 // =============================================================================
 
-// Permitir solicitudes desde el frontend React
-header('Access-Control-Allow-Origin: http://localhost:3000'); // Cambiar a dominio en producción
+// Lista de orígenes permitidos (whitelist)
+$allowed_origins = [
+    'http://localhost:3000',      // React Dev Server (Create React App)
+    'http://localhost:5173',      // Vite Dev Server
+    'http://localhost:4173',      // Vite Preview
+    'https://submate.app',        // Producción
+    'https://www.submate.app',    // Producción con www
+];
+
+// Obtener el origen de la petición
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+// Validar si el origen está permitido
+$origin_allowed = false;
+
+if (in_array($origin, $allowed_origins)) {
+    // El origen está en la lista blanca
+    $origin_allowed = true;
+} elseif (strpos($origin, 'http://localhost:') === 0 || strpos($origin, 'http://127.0.0.1:') === 0) {
+    // Permitir cualquier puerto localhost en desarrollo
+    $origin_allowed = true;
+}
+
+// Si el origen está permitido, devolver el header dinámicamente
+if ($origin_allowed && !empty($origin)) {
+    header("Access-Control-Allow-Origin: $origin");
+    header('Access-Control-Allow-Credentials: true');
+}
+
+// Headers CORS comunes (siempre se envían)
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Max-Age: 86400'); // 24 horas de cache para preflight
 
 // Manejar peticiones OPTIONS (preflight)
