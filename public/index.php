@@ -1,5 +1,19 @@
 <?php
 
+// =============================================================================
+// MANEJO DE ARCHIVOS ESTÁTICOS (Servidor interno de PHP)
+// =============================================================================
+
+// Manejo de archivos estáticos para el servidor interno de PHP
+$uri = urldecode(
+    parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)
+);
+
+// Si el archivo existe físicamente y no es la raíz, sírvelo directamente
+if ($uri !== '/' && file_exists(__DIR__ . $uri)) {
+    return false;
+}
+
 /**
  * SubMate Backend - Entry Point
  * 
