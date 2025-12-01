@@ -1,0 +1,5 @@
+SQLSTATE[01000]: Warning: 1265 Data truncated for column 'estado_ahjr' at row 1
+#0 C:\laragon\www\submate-backend\app\models\SuscripcionModel.php(98): PDOStatement->execute(Array)
+#1 C:\laragon\www\submate-backend\app\services\SuscripcionService.php(165): App\Models\SuscripcionModel->editar(3, Array)
+#2 C:\laragon\www\submate-backend\scripts\test_estado.php(38): App\Services\SuscripcionService->cambiarEstado(3, 2, 'INACTIVO')
+#3 {main}

@@ -48,7 +48,8 @@ class SuscripcionModel
      */
     public function listarPorUsuario(int $uid): array
     {
-        $sql = "SELECT * FROM td_suscripciones_ahjr 
+        $sql = "SELECT *, DATEDIFF(fecha_proximo_pago_ahjr, CURDATE()) as dias_restantes_ahjr 
+                FROM td_suscripciones_ahjr 
                 WHERE id_usuario_suscripcion_ahjr = :uid 
                 ORDER BY fecha_creacion_ahjr DESC";
 
@@ -63,7 +64,8 @@ class SuscripcionModel
      */
     public function obtener(int $id, int $uid): ?array
     {
-        $sql = "SELECT * FROM td_suscripciones_ahjr 
+        $sql = "SELECT *, DATEDIFF(fecha_proximo_pago_ahjr, CURDATE()) as dias_restantes_ahjr 
+                FROM td_suscripciones_ahjr 
                 WHERE id_suscripcion_ahjr = :id 
                 AND id_usuario_suscripcion_ahjr = :uid 
                 LIMIT 1";
@@ -105,5 +107,22 @@ class SuscripcionModel
         $stmt = $this->db->prepare($sql);
 
         return $stmt->execute(['id' => $id]);
+    }
+    /**
+     * 6. Busca suscripción por nombre normalizado
+     */
+    public function buscarSuscripcionPorNombre(int $uid, string $nombreNormalizado): ?array
+    {
+        // Normaliza el nombre en la BD: quita espacios y convierte a minúsculas
+        $sql = "SELECT * FROM td_suscripciones_ahjr 
+                WHERE id_usuario_suscripcion_ahjr = :uid 
+                AND LOWER(REPLACE(nombre_servicio_ahjr, ' ', '')) = :nombre
+                LIMIT 1";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['uid' => $uid, 'nombre' => $nombreNormalizado]);
+
+        $result = $stmt->fetch();
+        return $result ?: null;
     }
 }

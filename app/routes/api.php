@@ -12,6 +12,7 @@ use App\Controllers\UsuarioController;
 use App\Controllers\SuscripcionController;
 use App\Controllers\SuscripcionOperacionesController;
 use App\Controllers\DashboardController;
+use App\Core\Response;
 
 // =============================================================================
 // INSTANCIAR CONTROLADORES
@@ -39,6 +40,7 @@ $router_ahjr->add_ahjr('GET', '/', function () {
                 "POST /api/auth/login" => "Iniciar sesión y obtener token JWT",
                 "POST /api/auth/logout" => "Cerrar sesión",
                 "GET /api/auth/me" => "Obtener usuario autenticado desde token",
+                "GET /api/auth/email-available" => "Verificar disponibilidad de email (UX Check)",
                 "POST /api/auth/password-reset" => "Solicitar reset de contraseña",
                 "POST /api/auth/password-reset-verify" => "Verificar código y cambiar contraseña"
             ],
@@ -86,34 +88,34 @@ $router_ahjr->add_ahjr('GET', '/api/auth/me', function () use ($authController) 
     $authController->me();
 });
 
-// POST /auth/logout - Cerrar sesión (ruta legacy)
-$router_ahjr->add_ahjr('POST', '/auth/logout', function () {
-    // Logout es manejado por el frontend (eliminar token)
-    Response::ok_ahjr(['message' => 'Sesión cerrada correctamente.']);
+// POST /api/auth/logout - Cerrar sesión
+$router_ahjr->add_ahjr('POST', '/api/auth/logout', function () use ($authController) {
+    $authController->logout();
 });
 
-// POST /auth/register-verify - Verificar código OTP de registro
-$router_ahjr->add_ahjr('POST', '/auth/register-verify', function () {
-    // TODO: Implementar verificación de OTP si es necesaria
-    Response::ok_ahjr(['message' => 'Cuenta verificada correctamente.']);
+// POST /api/auth/register-verify - Verificar código OTP de registro
+$router_ahjr->add_ahjr('POST', '/api/auth/register-verify', function () use ($authController) {
+    $authController->verifyOTP();
 });
 
-// POST /auth/register-resend - Reenviar código OTP
-$router_ahjr->add_ahjr('POST', '/auth/register-resend', function () {
-    // TODO: Implementar reenvío de OTP si es necesario
-    Response::ok_ahjr(['message' => 'Código reenviado correctamente.']);
+// POST /api/auth/password-reset - Solicitar reset de contraseña
+$router_ahjr->add_ahjr('POST', '/api/auth/password-reset', function () use ($authController) {
+    $authController->passwordReset();
 });
 
-// POST /auth/password-reset - Solicitar reset de contraseña
-$router_ahjr->add_ahjr('POST', '/auth/password-reset', function () {
-    // TODO: Implementar solicitud de reset
-    Response::ok_ahjr(['message' => 'Email de recuperación enviado.']);
+// POST /api/auth/password-reset-verify - Verificar código y cambiar contraseña
+$router_ahjr->add_ahjr('POST', '/api/auth/password-reset-verify', function () use ($authController) {
+    $authController->passwordResetVerify();
 });
 
-// POST /auth/password-reset-verify - Verificar código y cambiar contraseña
-$router_ahjr->add_ahjr('POST', '/auth/password-reset-verify', function () {
-    // TODO: Implementar verificación y cambio de contraseña
-    Response::ok_ahjr(['message' => 'Contraseña actualizada correctamente.']);
+// POST /auth/password-reset - Solicitar reset de contraseña (legacy)
+$router_ahjr->add_ahjr('POST', '/auth/password-reset', function () use ($authController) {
+    $authController->passwordReset();
+});
+
+// POST /auth/password-reset-verify - Verificar código y cambiar contraseña (legacy)
+$router_ahjr->add_ahjr('POST', '/auth/password-reset-verify', function () use ($authController) {
+    $authController->passwordResetVerify();
 });
 
 // GET /auth/session - Verificar sesión activa (legacy)
@@ -121,10 +123,14 @@ $router_ahjr->add_ahjr('GET', '/auth/session', function () use ($authController)
     $authController->me();
 });
 
+// GET /api/auth/email-available - Validar disponibilidad de correo
+$router_ahjr->add_ahjr('GET', '/api/auth/email-available', function () use ($authController) {
+    $authController->checkEmailAvailability();
+});
+
 // GET /auth/email-available - Validar disponibilidad de correo (legacy)
-$router_ahjr->add_ahjr('GET', '/auth/email-available', function () {
-    // TODO: Implementar validación de email disponible
-    Response::ok_ahjr(['disponible' => true]);
+$router_ahjr->add_ahjr('GET', '/auth/email-available', function () use ($authController) {
+    $authController->checkEmailAvailability();
 });
 
 // =============================================================================
@@ -216,4 +222,23 @@ $router_ahjr->add_ahjr('DELETE', '/auth/usuario/(\d+)', function ($id) {
 
 $router_ahjr->add_ahjr('PUT', '/auth/usuario/(\d+)/rol', function ($id) {
     Response::ok_ahjr(['message' => 'Ruta legacy - funcionalidad movida']);
+});
+
+// =============================================================================
+// DEBUG ROUTES - Solo para desarrollo/demo
+// =============================================================================
+
+// POST /api/debug/run-worker - Ejecutar worker manualmente
+$router_ahjr->add_ahjr('POST', '/api/debug/run-worker', function () {
+    // Verificar que sea admin o entorno local (opcional, por ahora abierto para demo)
+    // Ejecutar el script worker.php y capturar salida
+    $output = [];
+    $returnVar = 0;
+    exec('php ' . __DIR__ . '/../../scripts/worker.php', $output, $returnVar);
+
+    Response::ok_ahjr([
+        'message' => 'Worker ejecutado',
+        'output' => $output,
+        'exit_code' => $returnVar
+    ]);
 });

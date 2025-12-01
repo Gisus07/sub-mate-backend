@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Services\SuscripcionOperacionesService;
 use App\Core\AuthMiddleware;
+use App\Core\Response;
 use Exception;
 
 /**
@@ -37,11 +38,15 @@ class SuscripcionOperacionesController
                 throw new Exception('Estado requerido.', 400);
             }
 
-            $this->service->gestionarEstado($id, $input['estado'], $usuario['sub']);
+            $frecuencia = $input['frecuencia'] ?? null;
+            $costo = isset($input['costo']) ? (float)$input['costo'] : null;
 
-            $this->responder(['message' => 'Estado actualizado correctamente.']);
+            $this->service->gestionarEstado($id, $input['estado'], $usuario['sub'], $frecuencia, $costo);
+
+            Response::ok_ahjr(['message' => 'Estado actualizado correctamente.']);
         } catch (Exception $e) {
-            $this->manejarError($e);
+            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status);
         }
     }
 
@@ -59,9 +64,10 @@ class SuscripcionOperacionesController
 
             $this->service->procesarSimulacionPago($id, $metodo, $usuario['sub']);
 
-            $this->responder(['message' => 'Pago simulado correctamente.']);
+            Response::ok_ahjr(['message' => 'Pago simulado correctamente.']);
         } catch (Exception $e) {
-            $this->manejarError($e);
+            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status);
         }
     }
 
@@ -71,18 +77,5 @@ class SuscripcionOperacionesController
     {
         $json = file_get_contents('php://input');
         return json_decode($json, true) ?? [];
-    }
-
-    private function responder(array $data, int $status = 200): void
-    {
-        http_response_code($status);
-        header('Content-Type: application/json');
-        echo json_encode($data);
-    }
-
-    private function manejarError(Exception $e): void
-    {
-        $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-        $this->responder(['error' => $e->getMessage()], $status);
     }
 }

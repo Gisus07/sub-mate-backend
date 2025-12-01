@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\UsuarioModel;
+use App\Models\UsuarioOTPModel;
 use Exception;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -18,12 +19,14 @@ use Firebase\JWT\Key;
 class AuthService
 {
     private UsuarioModel $model;
+    private UsuarioOTPModel $otpModel;
     private string $jwtSecret;
     private int $jwtExpiration = 86400; // 24 horas
 
     public function __construct()
     {
         $this->model = new UsuarioModel();
+        $this->otpModel = new UsuarioOTPModel();
         $this->jwtSecret = $_ENV['JWT_SECRET'] ?? 'default_secret_change_me';
     }
 
@@ -34,24 +37,152 @@ class AuthService
      */
     public function registrarUsuario(array $datosLimpios): array
     {
-        // Validar email único
+        // 1. Validar si ya existe como usuario activo
         if ($this->model->buscarPorEmail($datosLimpios['email'])) {
             throw new Exception('Este correo ya está registrado.', 409);
         }
 
-        // Mapear a formato DB y hashear contraseña
-        $datosMapeados = [
+        // 2. Generar OTP
+        $otp = (string) random_int(100000, 999999);
+        $otpHash = password_hash($otp, PASSWORD_BCRYPT);
+        $expira = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+
+        // 3. Guardar en tabla temporal (Pendientes)
+        $datosPendientes = [
             'nombre' => $datosLimpios['nombre'],
             'apellido' => $datosLimpios['apellido'],
             'email' => strtolower(trim($datosLimpios['email'])),
             'clave' => password_hash($datosLimpios['clave'], PASSWORD_BCRYPT),
+            'otp_hash' => $otpHash,
+            'otp_expira' => $expira
+        ];
+
+        $this->otpModel->crearRegistroPendiente($datosPendientes);
+
+        // 4. Enviar Email
+        \App\Core\Mailer::sendOTP_ahjr($datosPendientes['email'], $otp);
+
+        return ['message' => 'Código de verificación enviado al correo.'];
+    }
+
+    /**
+     * 2. Verifica OTP y activa usuario
+     */
+    public function verificarYActivar(string $email, string $otp): array
+    {
+        $pendiente = $this->otpModel->obtenerPendientePorEmail($email);
+
+        if (!$pendiente) {
+            throw new Exception('No hay registro pendiente para este email.', 404);
+        }
+
+        if (!password_verify($otp, $pendiente['otp_hash_ahjr'])) {
+            throw new Exception('Código incorrecto.', 400);
+        }
+
+        if (strtotime($pendiente['otp_expira_ahjr']) < time()) {
+            throw new Exception('El código ha expirado.', 400);
+        }
+
+        // Mover a usuarios activos
+        $datosUsuario = [
+            'nombre' => $pendiente['nombre_ahjr'],
+            'apellido' => $pendiente['apellido_ahjr'],
+            'email' => $pendiente['email_ahjr'],
+            'clave' => $pendiente['clave_ahjr'], // Ya está hasheada
             'estado' => 'activo',
             'rol' => 'user'
         ];
 
-        $id = $this->model->crear($datosMapeados);
+        // Insertar en tabla real (usando método existente que espera clave sin hash, pero aquí pasamos hash)
+        // NOTA: UsuarioModel::crear espera clave plana para hashear? 
+        // Revisando UsuarioModel::crear... NO, UsuarioModel::crear NO hashea, inserta directo.
+        // AuthService::registrarUsuario original hasheaba ANTES de llamar a model->crear.
+        // Entonces aquí pasamos la clave YA hasheada.
 
-        return ['id' => $id];
+        // CORRECCIÓN: UsuarioModel::crear inserta lo que recibe. 
+        // Pero AuthService::registrarUsuario original hacía: 'clave' => password_hash(...)
+        // Mi nuevo registrarUsuario hace hash al guardar en pendiente.
+        // Así que $pendiente['clave_ahjr'] YA es un hash.
+        // Al llamar a $this->model->crear($datosUsuario), se insertará el hash.
+
+        $id = $this->model->crear($datosUsuario);
+
+        // Eliminar pendiente
+        $this->otpModel->eliminarPendiente($pendiente['id_pendiente_ahjr']);
+
+        return ['id' => $id, 'message' => 'Cuenta verificada y creada exitosamente.'];
+    }
+
+    /**
+     * 3. Solicitar Reset de Contraseña
+     */
+    public function solicitarResetPassword(string $email): array
+    {
+        // Verificar si el usuario existe
+        if (!$this->model->buscarPorEmail($email)) {
+            // Por seguridad, no revelamos si el email existe o no, pero enviamos éxito simulado
+            // Opcional: throw new Exception('Email no registrado', 404); si la política lo permite.
+            // El usuario pidió "Solicitar reset", asumiremos que quiere saber si se envió.
+            // Pero para evitar enumeración, retornamos éxito genérico.
+            // Sin embargo, si no existe, no podemos enviar email real.
+            // Retornaremos éxito siempre.
+            return ['message' => 'Si el correo existe, se ha enviado un código de recuperación.'];
+        }
+
+        // Generar OTP
+        $otp = (string) random_int(100000, 999999);
+        $otpHash = password_hash($otp, PASSWORD_BCRYPT);
+        $expira = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+
+        $datosReset = [
+            'email' => strtolower(trim($email)),
+            'otp_hash' => $otpHash,
+            'otp_expira' => $expira
+        ];
+
+        $this->otpModel->crearResetPendiente($datosReset);
+
+        // Enviar Email
+        \App\Core\Mailer::sendOTP_ahjr($email, $otp); // Reusamos sendOTP o creamos uno específico?
+        // El usuario dijo "siguiendo el mismo patrón de OTP". sendOTP sirve.
+
+        return ['message' => 'Si el correo existe, se ha enviado un código de recuperación.'];
+    }
+
+    /**
+     * 4. Verificar Reset y Cambiar Contraseña
+     */
+    public function verificarResetPassword(string $email, string $otp, string $nuevaClave): array
+    {
+        $reset = $this->otpModel->obtenerResetPorEmail($email);
+
+        if (!$reset) {
+            throw new Exception('Solicitud no encontrada o expirada.', 404);
+        }
+
+        if (!password_verify($otp, $reset['otp_hash_ahjr'])) {
+            throw new Exception('Código incorrecto.', 400);
+        }
+
+        if (strtotime($reset['otp_expira_ahjr']) < time()) {
+            throw new Exception('El código ha expirado.', 400);
+        }
+
+        // Buscar usuario para obtener ID
+        $usuario = $this->model->buscarPorEmail($email);
+        if (!$usuario) {
+            throw new Exception('Usuario no encontrado.', 404);
+        }
+
+        // Actualizar contraseña
+        $nuevaClaveHash = password_hash($nuevaClave, PASSWORD_BCRYPT);
+        $this->model->actualizar($usuario['id_ahjr'], ['clave_ahjr' => $nuevaClaveHash]);
+
+        // Eliminar solicitud de reset
+        $this->otpModel->eliminarReset($reset['id_reset_ahjr']);
+
+        return ['message' => 'Contraseña actualizada correctamente.'];
     }
 
     /**

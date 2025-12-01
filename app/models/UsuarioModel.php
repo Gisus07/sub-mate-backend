@@ -10,7 +10,7 @@ use PDO;
 /**
  * UsuarioModel - Acceso a Datos
  * 
- * RESTRICCIÓN: Exactamente 5 métodos públicos
+ * RESTRICCIÓN: Exactamente 6 métodos públicos
  * Responsabilidad: SOLO SQL con columnas _ahjr
  */
 class UsuarioModel
@@ -95,5 +95,17 @@ class UsuarioModel
         $stmt = $this->db->prepare($sql);
 
         return $stmt->execute(['id' => $id]);
+    }
+
+    /**
+     * 6. Verifica si un email ya está registrado
+     */
+    public function existeEmail(string $email): bool
+    {
+        $sql = "SELECT COUNT(*) FROM td_usuarios_ahjr WHERE email_ahjr = :email";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['email' => strtolower(trim($email))]);
+
+        return (int) $stmt->fetchColumn() > 0;
     }
 }

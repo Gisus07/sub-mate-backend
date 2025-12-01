@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Services\UsuarioService;
 use App\Services\AuthService;
+use App\Core\Response;
 use Exception;
 
 /**
@@ -36,15 +37,15 @@ class UsuarioController
 
             // Validar email si se envía
             if (isset($input['email']) && !filter_var($input['email'], FILTER_VALIDATE_EMAIL)) {
-                $this->responder(['error' => 'Email inválido.'], 400);
-                return;
+                Response::badRequest_ahjr('Email inválido.');
             }
 
             $this->usuarioService->editarPerfil($usuarioAuth['sub'], $input);
 
-            $this->responder(['message' => 'Perfil actualizado correctamente.']);
+            Response::ok_ahjr(['message' => 'Perfil actualizado correctamente.']);
         } catch (Exception $e) {
-            $this->manejarError($e);
+            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status);
         }
     }
 
@@ -61,9 +62,10 @@ class UsuarioController
             $model = new \App\Models\UsuarioModel();
             $model->eliminar($usuarioAuth['sub']);
 
-            $this->responder(['message' => 'Cuenta eliminada correctamente.']);
+            Response::ok_ahjr(['message' => 'Cuenta eliminada correctamente.']);
         } catch (Exception $e) {
-            $this->manejarError($e);
+            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status);
         }
     }
 
@@ -85,18 +87,5 @@ class UsuarioController
     {
         $json = file_get_contents('php://input');
         return json_decode($json, true) ?? [];
-    }
-
-    private function responder(array $data, int $status = 200): void
-    {
-        http_response_code($status);
-        header('Content-Type: application/json');
-        echo json_encode($data);
-    }
-
-    private function manejarError(Exception $e): void
-    {
-        $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-        $this->responder(['error' => $e->getMessage()], $status);
     }
 }

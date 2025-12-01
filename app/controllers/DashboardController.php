@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Services\DashboardService;
 use App\Core\AuthMiddleware;
+use App\Core\Response;
 use Exception;
 
 /**
@@ -41,24 +42,13 @@ class DashboardController
                 'distribucion_metodos' => $this->service->prepararDistribucionMetodos($uid)
             ];
 
-            $this->responder($payload);
+            Response::ok_ahjr($payload);
         } catch (Exception $e) {
-            $this->manejarError($e);
+            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status);
         }
     }
 
     // ===== HELPERS PRIVADOS =====
 
-    private function responder(array $data, int $status = 200): void
-    {
-        http_response_code($status);
-        header('Content-Type: application/json');
-        echo json_encode($data);
-    }
-
-    private function manejarError(Exception $e): void
-    {
-        $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-        $this->responder(['error' => $e->getMessage()], $status);
-    }
 }

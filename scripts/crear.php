@@ -117,19 +117,35 @@ try {
         `estado_ahjr` ENUM('activa','inactiva') NOT NULL DEFAULT 'activa',
         `frecuencia_ahjr` ENUM('mensual','anual') NOT NULL,
         `metodo_pago_ahjr` ENUM('MasterCard','Visa','GPay','PayPal') NOT NULL,
-        `dia_cobro_ahjr` TINYINT UNSIGNED NOT NULL COMMENT 'Día del mes (1-31)',
+        `dia_cobro_ahjr` TINYINT UNSIGNED NULL COMMENT 'Día del mes (1-31)',
         `mes_cobro_ahjr` TINYINT UNSIGNED NULL COMMENT 'Mes del año (1-12), solo para anuales',
         `fecha_ultimo_pago_ahjr` DATE NOT NULL,
+        `fecha_proximo_pago_ahjr` DATE NULL,
         `fecha_creacion_ahjr` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         `fecha_actualizacion_ahjr` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (`id_suscripcion_ahjr`),
         KEY `idx_usuario_suscripcion_ahjr` (`id_usuario_suscripcion_ahjr`),
         CONSTRAINT `fk_usuario_suscripcion_ahjr` FOREIGN KEY (`id_usuario_suscripcion_ahjr`) 
             REFERENCES `td_usuarios_ahjr`(`id_ahjr`) ON DELETE CASCADE,
-        CONSTRAINT `chk_dia_cobro_ahjr` CHECK (`dia_cobro_ahjr` BETWEEN 1 AND 31),
+        CONSTRAINT `chk_dia_cobro_ahjr` CHECK (`dia_cobro_ahjr` IS NULL OR `dia_cobro_ahjr` BETWEEN 1 AND 31),
         CONSTRAINT `chk_mes_cobro_ahjr` CHECK (`mes_cobro_ahjr` IS NULL OR `mes_cobro_ahjr` BETWEEN 1 AND 12)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     echo "✓ Tabla 'td_suscripciones_ahjr' creada\n\n";
+
+    // ASEGURAR QUE LAS COLUMNAS SEAN NULLABLE (Para bases de datos existentes)
+    echo "► Verificando estructura de 'td_suscripciones_ahjr'...\n";
+    try {
+        $pdo_ahjr->exec("ALTER TABLE `td_suscripciones_ahjr` MODIFY `dia_cobro_ahjr` TINYINT UNSIGNED NULL COMMENT 'Día del mes (1-31)'");
+        $pdo_ahjr->exec("ALTER TABLE `td_suscripciones_ahjr` MODIFY `mes_cobro_ahjr` TINYINT UNSIGNED NULL COMMENT 'Mes del año (1-12), solo para anuales'");
+        $pdo_ahjr->exec("ALTER TABLE `td_suscripciones_ahjr` MODIFY `fecha_proximo_pago_ahjr` DATE NULL");
+
+        // Actualizar constraints si es necesario (MySQL no permite modificar CHECK fácilmente en versiones viejas, pero intentamos asegurar integridad)
+        // Nota: MODIFY columna mantiene los constraints si no se especifican cambios drásticos, pero CHECK constraints son metadatos aparte.
+        // Asumimos que si la tabla se creó recién, ya tiene los checks correctos. Si es vieja, el MODIFY permite NULL.
+        echo "✓ Estructura actualizada a NULLABLE\n\n";
+    } catch (PDOException $e) {
+        echo "⚠ Nota: No se pudo alterar la tabla (posiblemente ya correcta o error menor): " . $e->getMessage() . "\n\n";
+    }
 
     // ================================================================
     // TABLA 5: td_historial_pagos_ahjr (NUEVA)
@@ -149,6 +165,28 @@ try {
             REFERENCES `td_suscripciones_ahjr`(`id_suscripcion_ahjr`) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     echo "✓ Tabla 'td_historial_pagos_ahjr' creada\n\n";
+
+    // ================================================================
+    // TABLA 6: td_email_pendientes_ahjr (COLA DE TAREAS)
+    // ================================================================
+    echo "► Creando tabla 'td_email_pendientes_ahjr'...\n";
+    $pdo_ahjr->exec("CREATE TABLE IF NOT EXISTS `td_email_pendientes_ahjr` (
+        `id_ahjr` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        `id_usuario_ahjr` INT UNSIGNED NOT NULL,
+        `id_suscripcion_ahjr` INT UNSIGNED NOT NULL,
+        `tipo_alerta_ahjr` ENUM('RECORDATORIO_15','RECORDATORIO_7','RECORDATORIO_3') NOT NULL,
+        `fecha_envio_programada_ahjr` DATE NOT NULL,
+        `fecha_creacion_ahjr` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `estado_ahjr` ENUM('PENDIENTE','ENVIADO','FALLIDO') NOT NULL DEFAULT 'PENDIENTE',
+        PRIMARY KEY (`id_ahjr`),
+        KEY `idx_fecha_envio_ahjr` (`fecha_envio_programada_ahjr`),
+        KEY `idx_estado_ahjr` (`estado_ahjr`),
+        CONSTRAINT `fk_email_usuario_ahjr` FOREIGN KEY (`id_usuario_ahjr`) 
+            REFERENCES `td_usuarios_ahjr`(`id_ahjr`) ON DELETE CASCADE,
+        CONSTRAINT `fk_email_suscripcion_ahjr` FOREIGN KEY (`id_suscripcion_ahjr`) 
+            REFERENCES `td_suscripciones_ahjr`(`id_suscripcion_ahjr`) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    echo "✓ Tabla 'td_email_pendientes_ahjr' creada\n\n";
 
     // ================================================================
     // TRIGGER: tr_actualizar_fecha_ahjr (RECUPERADO)
@@ -182,37 +220,67 @@ try {
     )
     BEGIN
         DECLARE v_fecha_ultimo_pago DATE;
+        DECLARE v_fecha_proximo_pago DATE;
         DECLARE v_dia_actual INT;
         DECLARE v_mes_actual INT;
         DECLARE v_anio_actual INT;
+        DECLARE v_temp_date DATE;
+        DECLARE v_last_day DATE;
         
         SET v_dia_actual = DAY(CURDATE());
         SET v_mes_actual = MONTH(CURDATE());
         SET v_anio_actual = YEAR(CURDATE());
         
+        -- Lógica segura para fechas (Manejo de días 29, 30, 31)
         IF p_frecuencia = 'mensual' THEN
+            -- Determinar si el cobro es este mes o el anterior
             IF v_dia_actual >= p_dia_cobro THEN
-                SET v_fecha_ultimo_pago = DATE(CONCAT(v_anio_actual, '-', LPAD(v_mes_actual, 2, '0'), '-', LPAD(p_dia_cobro, 2, '0')));
+                -- Cobro de este mes
+                SET v_temp_date = STR_TO_DATE(CONCAT(v_anio_actual, '-', v_mes_actual, '-01'), '%Y-%m-%d');
             ELSE
-                SET v_fecha_ultimo_pago = DATE_SUB(
-                    DATE(CONCAT(v_anio_actual, '-', LPAD(v_mes_actual, 2, '0'), '-', LPAD(p_dia_cobro, 2, '0'))),
-                    INTERVAL 1 MONTH
-                );
+                -- Cobro del mes anterior
+                SET v_temp_date = DATE_SUB(STR_TO_DATE(CONCAT(v_anio_actual, '-', v_mes_actual, '-01'), '%Y-%m-%d'), INTERVAL 1 MONTH);
             END IF;
+
+            -- Ajustar día al último día del mes si es necesario
+            SET v_last_day = LAST_DAY(v_temp_date);
+            IF p_dia_cobro > DAY(v_last_day) THEN
+                SET v_fecha_ultimo_pago = v_last_day;
+            ELSE
+                SET v_fecha_ultimo_pago = DATE_ADD(v_temp_date, INTERVAL p_dia_cobro - 1 DAY);
+            END IF;
+
+            -- Próximo pago: +1 mes (MySQL maneja el overflow automáticamente)
+            SET v_fecha_proximo_pago = DATE_ADD(v_fecha_ultimo_pago, INTERVAL 1 MONTH);
+
         ELSEIF p_frecuencia = 'anual' THEN
+            -- Determinar si el cobro es este año o el anterior
             IF v_mes_actual > p_mes_cobro OR (v_mes_actual = p_mes_cobro AND v_dia_actual >= p_dia_cobro) THEN
-                SET v_fecha_ultimo_pago = DATE(CONCAT(v_anio_actual, '-', LPAD(p_mes_cobro, 2, '0'), '-', LPAD(p_dia_cobro, 2, '0')));
+                -- Cobro de este año
+                SET v_temp_date = STR_TO_DATE(CONCAT(v_anio_actual, '-', p_mes_cobro, '-01'), '%Y-%m-%d');
             ELSE
-                SET v_fecha_ultimo_pago = DATE(CONCAT(v_anio_actual - 1, '-', LPAD(p_mes_cobro, 2, '0'), '-', LPAD(p_dia_cobro, 2, '0')));
+                -- Cobro del año anterior
+                SET v_temp_date = STR_TO_DATE(CONCAT(v_anio_actual - 1, '-', p_mes_cobro, '-01'), '%Y-%m-%d');
             END IF;
+
+            -- Ajustar día al último día del mes si es necesario
+            SET v_last_day = LAST_DAY(v_temp_date);
+            IF p_dia_cobro > DAY(v_last_day) THEN
+                SET v_fecha_ultimo_pago = v_last_day;
+            ELSE
+                SET v_fecha_ultimo_pago = DATE_ADD(v_temp_date, INTERVAL p_dia_cobro - 1 DAY);
+            END IF;
+
+            -- Próximo pago: +1 año
+            SET v_fecha_proximo_pago = DATE_ADD(v_fecha_ultimo_pago, INTERVAL 1 YEAR);
         END IF;
         
         INSERT INTO `td_suscripciones_ahjr` (
             `id_usuario_suscripcion_ahjr`, `nombre_servicio_ahjr`, `costo_ahjr`, `frecuencia_ahjr`, 
-            `metodo_pago_ahjr`, `dia_cobro_ahjr`, `mes_cobro_ahjr`, `fecha_ultimo_pago_ahjr`
+            `metodo_pago_ahjr`, `dia_cobro_ahjr`, `mes_cobro_ahjr`, `fecha_ultimo_pago_ahjr`, `fecha_proximo_pago_ahjr`
         ) VALUES (
             p_id_usuario, p_nombre_servicio, p_costo, p_frecuencia, 
-            p_metodo_pago, p_dia_cobro, p_mes_cobro, v_fecha_ultimo_pago
+            p_metodo_pago, p_dia_cobro, p_mes_cobro, v_fecha_ultimo_pago, v_fecha_proximo_pago
         );
         
         SELECT LAST_INSERT_ID() AS id_suscripcion_ahjr;
@@ -263,9 +331,12 @@ try {
         echo "  ► Creando suscripciones de prueba para Beta...\n";
 
         // Netflix
+        $fecha_pago_netflix = date('Y-m-15');
+        $fecha_proximo_netflix = date('Y-m-15', strtotime('+1 month'));
+
         $pdo_ahjr->prepare("INSERT INTO td_suscripciones_ahjr 
-            (id_usuario_suscripcion_ahjr, nombre_servicio_ahjr, costo_ahjr, frecuencia_ahjr, metodo_pago_ahjr, dia_cobro_ahjr, mes_cobro_ahjr, fecha_ultimo_pago_ahjr)
-            VALUES (:id_user, :nombre, :costo, :frecuencia, :metodo, :dia, :mes, :fecha_pago)")
+            (id_usuario_suscripcion_ahjr, nombre_servicio_ahjr, costo_ahjr, frecuencia_ahjr, metodo_pago_ahjr, dia_cobro_ahjr, mes_cobro_ahjr, fecha_ultimo_pago_ahjr, fecha_proximo_pago_ahjr)
+            VALUES (:id_user, :nombre, :costo, :frecuencia, :metodo, :dia, :mes, :fecha_pago, :fecha_proximo)")
             ->execute([
                 'id_user' => $beta_id,
                 'nombre' => 'Netflix',
@@ -274,14 +345,18 @@ try {
                 'metodo' => 'Visa',
                 'dia' => 15,
                 'mes' => null,
-                'fecha_pago' => date('Y-m-15')
+                'fecha_pago' => $fecha_pago_netflix,
+                'fecha_proximo' => $fecha_proximo_netflix
             ]);
         $netflix_id = $pdo_ahjr->lastInsertId();
 
         // Spotify
+        $fecha_pago_spotify = date('Y-m-05');
+        $fecha_proximo_spotify = date('Y-m-05', strtotime('+1 month'));
+
         $pdo_ahjr->prepare("INSERT INTO td_suscripciones_ahjr 
-            (id_usuario_suscripcion_ahjr, nombre_servicio_ahjr, costo_ahjr, frecuencia_ahjr, metodo_pago_ahjr, dia_cobro_ahjr, mes_cobro_ahjr, fecha_ultimo_pago_ahjr)
-            VALUES (:id_user, :nombre, :costo, :frecuencia, :metodo, :dia, :mes, :fecha_pago)")
+            (id_usuario_suscripcion_ahjr, nombre_servicio_ahjr, costo_ahjr, frecuencia_ahjr, metodo_pago_ahjr, dia_cobro_ahjr, mes_cobro_ahjr, fecha_ultimo_pago_ahjr, fecha_proximo_pago_ahjr)
+            VALUES (:id_user, :nombre, :costo, :frecuencia, :metodo, :dia, :mes, :fecha_pago, :fecha_proximo)")
             ->execute([
                 'id_user' => $beta_id,
                 'nombre' => 'Spotify',
@@ -290,7 +365,8 @@ try {
                 'metodo' => 'PayPal',
                 'dia' => 5,
                 'mes' => null,
-                'fecha_pago' => date('Y-m-05')
+                'fecha_pago' => $fecha_pago_spotify,
+                'fecha_proximo' => $fecha_proximo_spotify
             ]);
         $spotify_id = $pdo_ahjr->lastInsertId();
 

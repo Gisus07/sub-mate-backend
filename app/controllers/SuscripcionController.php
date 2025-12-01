@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Services\SuscripcionService;
 use App\Core\AuthMiddleware;
+use App\Core\Response;
 use Exception;
 
 /**
@@ -36,9 +37,10 @@ class SuscripcionController
             // Usar el ID del usuario autenticado
             $suscripciones = $this->service->obtenerLista($usuario['sub']);
 
-            $this->responder(['suscripciones' => $suscripciones]);
+            Response::ok_ahjr(['suscripciones' => $suscripciones]);
         } catch (Exception $e) {
-            $this->manejarError($e);
+            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status);
         }
     }
 
@@ -53,12 +55,13 @@ class SuscripcionController
 
             $resultado = $this->service->crear($input, $usuario['sub']);
 
-            $this->responder([
+            Response::json_ahjr([
                 'message' => 'Suscripción creada exitosamente.',
                 'id' => $resultado['id']
             ], 201);
         } catch (Exception $e) {
-            $this->manejarError($e);
+            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status);
         }
     }
 
@@ -71,9 +74,10 @@ class SuscripcionController
             $usuario = $this->middleware->handle();
             $suscripcion = $this->service->obtenerDetalle($id, $usuario['sub']);
 
-            $this->responder(['suscripcion' => $suscripcion]);
+            Response::ok_ahjr(['suscripcion' => $suscripcion]);
         } catch (Exception $e) {
-            $this->manejarError($e);
+            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status);
         }
     }
 
@@ -88,9 +92,10 @@ class SuscripcionController
 
             $this->service->modificar($id, $input, $usuario['sub']);
 
-            $this->responder(['message' => 'Suscripción actualizada correctamente.']);
+            Response::ok_ahjr(['message' => 'Suscripción actualizada correctamente.']);
         } catch (Exception $e) {
-            $this->manejarError($e);
+            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status);
         }
     }
 
@@ -104,9 +109,10 @@ class SuscripcionController
 
             $this->service->borrar($id, $usuario['sub']);
 
-            $this->responder(['message' => 'Suscripción eliminada correctamente.']);
+            Response::ok_ahjr(['message' => 'Suscripción eliminada correctamente.']);
         } catch (Exception $e) {
-            $this->manejarError($e);
+            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status);
         }
     }
 
@@ -116,18 +122,5 @@ class SuscripcionController
     {
         $json = file_get_contents('php://input');
         return json_decode($json, true) ?? [];
-    }
-
-    private function responder(array $data, int $status = 200): void
-    {
-        http_response_code($status);
-        header('Content-Type: application/json');
-        echo json_encode($data);
-    }
-
-    private function manejarError(Exception $e): void
-    {
-        $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-        $this->responder(['error' => $e->getMessage()], $status);
     }
 }
