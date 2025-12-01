@@ -60,7 +60,7 @@ class AuthService
         $this->otpModel->crearRegistroPendiente($datosPendientes);
 
         // 4. Enviar Email
-        \App\Core\Mailer::sendOTP_ahjr($datosPendientes['email'], $otp);
+        \App\core\Mailer::sendOTP_ahjr($datosPendientes['email'], $otp);
 
         return ['message' => 'Código de verificación enviado al correo.'];
     }
@@ -144,7 +144,7 @@ class AuthService
         $this->otpModel->crearResetPendiente($datosReset);
 
         // Enviar Email
-        \App\Core\Mailer::sendOTP_ahjr($email, $otp); // Reusamos sendOTP o creamos uno específico?
+        \App\core\Mailer::sendOTP_ahjr($email, $otp); // Reusamos sendOTP o creamos uno específico?
         // El usuario dijo "siguiendo el mismo patrón de OTP". sendOTP sirve.
 
         return ['message' => 'Si el correo existe, se ha enviado un código de recuperación.'];

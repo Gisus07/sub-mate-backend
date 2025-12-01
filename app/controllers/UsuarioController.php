@@ -59,7 +59,7 @@ class UsuarioController
             $usuarioAuth = $this->obtenerUsuarioAutenticado();
 
             // Usar el modelo directamente para eliminar
-            $model = new \App\Models\UsuarioModel();
+            $model = new \App\models\UsuarioModel();
             $model->eliminar($usuarioAuth['sub']);
 
             Response::ok_ahjr(['message' => 'Cuenta eliminada correctamente.']);

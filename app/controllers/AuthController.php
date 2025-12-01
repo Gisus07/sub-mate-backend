@@ -221,7 +221,7 @@ class AuthController
             }
 
             // Verificar si el email ya existe
-            $usuarioModel = new \App\Models\UsuarioModel();
+            $usuarioModel = new \App\models\UsuarioModel();
             $existe = $usuarioModel->existeEmail($email);
 
             if ($existe) {
