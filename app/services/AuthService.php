@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\services;
 
-use App\Models\UsuarioModel;
-use App\Models\UsuarioOTPModel;
+use App\models\UsuarioModel;
+use App\models\UsuarioOTPModel;
 use Exception;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;

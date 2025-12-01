@@ -4,7 +4,7 @@
  * Rutas del Dashboard
  */
 
-use App\Controllers\DashboardController;
+use App\controllers\DashboardController;
 
 $dashboardController = new DashboardController();
 

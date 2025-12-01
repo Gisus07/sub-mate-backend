@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\services;
 
-use App\Models\SuscripcionModel;
-use App\Services\AlertsService;
+use App\models\SuscripcionModel;
+use App\services\AlertsService;
 use Exception;
 
 /**

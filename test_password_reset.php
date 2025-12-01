@@ -1,9 +1,9 @@
 <?php
 require 'vendor/autoload.php';
 
-use App\Services\AuthService;
-use App\Models\UsuarioOTPModel;
-use App\Models\UsuarioModel;
+use App\services\AuthService;
+use App\models\UsuarioOTPModel;
+use App\models\UsuarioModel;
 use App\core\Database;
 
 // Mock environment

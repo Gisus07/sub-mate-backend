@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Controllers;
+namespace App\controllers;
 
-use App\Services\SuscripcionService;
+use App\services\SuscripcionService;
 use App\core\AuthMiddleware;
 use App\core\Response;
 use Exception;

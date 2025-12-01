@@ -11,8 +11,8 @@ require_once __DIR__ . '/../app/models/DashboardModel.php';
 require_once __DIR__ . '/../app/services/DashboardService.php';
 
 use App\core\Env;
-use App\Services\DashboardService;
-use App\Models\DashboardModel;
+use App\services\DashboardService;
+use App\models\DashboardModel;
 
 try {
     echo "=== TEST: Dashboard Module ===\n\n";

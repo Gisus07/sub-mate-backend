@@ -2,8 +2,8 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use App\Services\SuscripcionService;
-use App\Models\UsuarioModel;
+use App\services\SuscripcionService;
+use App\models\UsuarioModel;
 use App\core\Database;
 
 // Helper to print colored output

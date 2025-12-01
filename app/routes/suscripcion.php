@@ -8,8 +8,8 @@
  * - SuscripcionOperacionesController: Operaciones especiales (RPC) - 2 métodos
  */
 
-use App\Controllers\SuscripcionController;
-use App\Controllers\SuscripcionOperacionesController;
+use App\controllers\SuscripcionController;
+use App\controllers\SuscripcionOperacionesController;
 
 // Instanciar controladores
 $suscripcionController = new SuscripcionController();

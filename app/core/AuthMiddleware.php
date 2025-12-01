@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\core;
 
-use App\Services\AuthService;
+use App\services\AuthService;
 use Exception;
 
 /**

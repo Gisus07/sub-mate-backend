@@ -3,8 +3,8 @@ require_once __DIR__ . '/../vendor/autoload.php';
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
-use App\Services\SuscripcionService;
-use App\Services\AlertsService;
+use App\services\SuscripcionService;
+use App\services\AlertsService;
 use App\core\Database;
 
 try {

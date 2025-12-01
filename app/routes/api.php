@@ -7,11 +7,11 @@
  * Los controladores manejan la autenticación internamente.
  */
 
-use App\Controllers\AuthController;
-use App\Controllers\UsuarioController;
-use App\Controllers\SuscripcionController;
-use App\Controllers\SuscripcionOperacionesController;
-use App\Controllers\DashboardController;
+use App\controllers\AuthController;
+use App\controllers\UsuarioController;
+use App\controllers\SuscripcionController;
+use App\controllers\SuscripcionOperacionesController;
+use App\controllers\DashboardController;
 use App\core\Response;
 
 // =============================================================================

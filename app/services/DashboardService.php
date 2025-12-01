@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\services;
 
-use App\Models\DashboardModel;
+use App\models\DashboardModel;
 use DateTime;
 
 /**

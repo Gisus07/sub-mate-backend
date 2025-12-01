@@ -11,7 +11,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use Dotenv\Dotenv;
 use App\core\Database;
-use App\Services\AlertsService;
+use App\services\AlertsService;
 
 // Cargar variables de entorno
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');

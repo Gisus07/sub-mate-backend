@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Controllers;
+namespace App\controllers;
 
-use App\Services\UsuarioService;
-use App\Services\AuthService;
+use App\services\UsuarioService;
+use App\services\AuthService;
 use App\core\Response;
 use Exception;
 

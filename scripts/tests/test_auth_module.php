@@ -14,8 +14,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\core\Env;
-use App\Models\UsuarioModel;
-use App\Services\AuthService;
+use App\models\UsuarioModel;
+use App\services\AuthService;
 
 echo "=== Prueba del Módulo de Autenticación ===\n\n";
 

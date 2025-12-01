@@ -11,7 +11,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\core\Env;
 use App\core\AuthMiddleware;
-use App\Services\AuthService;
+use App\services\AuthService;
 
 Env::loadEnv(__DIR__ . '/..');
 

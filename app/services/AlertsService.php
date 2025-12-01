@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\services;
 
 use App\core\Mailer;
-use App\Models\UsuarioModel;
+use App\models\UsuarioModel;
 use Exception;
 
 class AlertsService
