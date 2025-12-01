@@ -30,9 +30,9 @@ class Mailer
         $port = getenv('SMTP_PORT');
         $user = getenv('SMTP_USER');
         $pass = getenv('SMTP_PASS');
-        $secure = getenv('SMTP_SECURE') ?: 'tls';
-        $from = getenv('SMTP_FROM') ?: 'no-reply@submate.app';
-        $fromName = getenv('SMTP_FROM_NAME') ?: 'SubMate';
+        $secure = getenv('SMTP_SECURE');
+        $from = getenv('SMTP_FROM');
+        $fromName = getenv('SMTP_FROM_NAME');
 
         if (!$host || !$port || !$user || !$pass) {
             error_log('SMTP no configurado');
