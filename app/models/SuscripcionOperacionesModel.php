@@ -156,4 +156,22 @@ class SuscripcionOperacionesModel
             throw $e;
         }
     }
+
+    /**
+     * 3. Registra pago histórico manual (para creación de suscripción)
+     */
+    public function registrarPagoHistoricoManual(int $id, float $monto, string $fecha, string $metodo): bool
+    {
+        $sql = "INSERT INTO td_historial_pagos_ahjr 
+                (id_suscripcion_historial_ahjr, monto_pagado_ahjr, fecha_pago_ahjr, metodo_pago_snapshot_ahjr)
+                VALUES (:id, :monto, :fecha, :metodo)";
+
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            'id' => $id,
+            'monto' => $monto,
+            'fecha' => $fecha,
+            'metodo' => $metodo
+        ]);
+    }
 }

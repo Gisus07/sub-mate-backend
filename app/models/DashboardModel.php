@@ -101,32 +101,54 @@ class DashboardModel
     }
 
     /**
-     * 3. Obtiene historial de pagos de los últimos 6 meses
+     * 3. Obtiene historial anual (Enero - Diciembre del año actual)
      * 
-     * Retorna: ['2024-06' => 120.50, '2024-07' => 135.00, ...]
+     * Lógica Híbrida:
+     * - Meses pasados: Suma de historial real.
+     * - Mes actual: Suma de historial (pagado) + Proyección (por pagar).
      */
-    public function obtenerHistorialUltimos6Meses(int $uid): array
+    public function obtenerHistorialAnual(int $uid): array
     {
-        $sql = "SELECT 
-                    DATE_FORMAT(h.fecha_pago_ahjr, '%Y-%m') as mes,
-                    SUM(h.monto_pagado_ahjr) as total
-                FROM td_historial_pagos_ahjr h
-                INNER JOIN td_suscripciones_ahjr s 
-                    ON h.id_suscripcion_historial_ahjr = s.id_suscripcion_ahjr
-                WHERE s.id_usuario_suscripcion_ahjr = :uid
-                AND h.fecha_pago_ahjr >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-                GROUP BY DATE_FORMAT(h.fecha_pago_ahjr, '%Y-%m')
-                ORDER BY mes ASC";
+        $anioActual = (int) date('Y');
+        $mesActual = (int) date('n');
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['uid' => $uid]);
+        // 1. Obtener historial real de todo el año (Ene - Actual)
+        $sqlHistorial = "SELECT 
+                            DATE_FORMAT(h.fecha_pago_ahjr, '%Y-%m') as mes,
+                            SUM(h.monto_pagado_ahjr) as total
+                        FROM td_historial_pagos_ahjr h
+                        INNER JOIN td_suscripciones_ahjr s 
+                            ON h.id_suscripcion_historial_ahjr = s.id_suscripcion_ahjr
+                        WHERE s.id_usuario_suscripcion_ahjr = :uid
+                        AND YEAR(h.fecha_pago_ahjr) = :anio
+                        GROUP BY DATE_FORMAT(h.fecha_pago_ahjr, '%Y-%m')";
 
-        $resultado = [];
-        while ($row = $stmt->fetch()) {
-            $resultado[$row['mes']] = (float) $row['total'];
+        $stmt = $this->db->prepare($sqlHistorial);
+        $stmt->execute(['uid' => $uid, 'anio' => $anioActual]);
+
+        $historial = $stmt->fetchAll(PDO::FETCH_KEY_PAIR); // ['2024-01' => 100, ...]
+
+        // 2. Calcular proyección "Por Pagar" del mes actual
+        // Suscripciones activas cuya fecha de próximo pago cae en este mes y año
+        $sqlProyeccion = "SELECT COALESCE(SUM(costo_ahjr), 0) as total
+                          FROM td_suscripciones_ahjr
+                          WHERE id_usuario_suscripcion_ahjr = :uid
+                          AND estado_ahjr = 'activa'
+                          AND MONTH(fecha_proximo_pago_ahjr) = :mes
+                          AND YEAR(fecha_proximo_pago_ahjr) = :anio";
+
+        $stmtProj = $this->db->prepare($sqlProyeccion);
+        $stmtProj->execute(['uid' => $uid, 'mes' => $mesActual, 'anio' => $anioActual]);
+        $porPagar = (float) $stmtProj->fetch()['total'];
+
+        // 3. Sumar proyección al mes actual en el historial
+        $mesActualKey = date('Y-m');
+        if (!isset($historial[$mesActualKey])) {
+            $historial[$mesActualKey] = 0;
         }
+        $historial[$mesActualKey] += $porPagar;
 
-        return $resultado;
+        return $historial;
     }
 
     /**
@@ -180,23 +202,94 @@ class DashboardModel
 
     /**
      * MÉTODO ADICIONAL para prepararDistribucionMetodos (usado por DashboardService)
-     * Obtiene distribución de gastos por método de pago desde el historial
+     * Obtiene distribución de gastos por método de pago desde suscripciones activas
      */
     public function obtenerDistribucionPorMetodo(int $uid): array
     {
         $sql = "SELECT 
-                    h.metodo_pago_snapshot_ahjr as metodo,
-                    SUM(h.monto_pagado_ahjr) as total
-                FROM td_historial_pagos_ahjr h
-                INNER JOIN td_suscripciones_ahjr s 
-                    ON h.id_suscripcion_historial_ahjr = s.id_suscripcion_ahjr
-                WHERE s.id_usuario_suscripcion_ahjr = :uid
-                GROUP BY h.metodo_pago_snapshot_ahjr
+                    metodo_pago_ahjr, 
+                    SUM(costo_ahjr) as total
+                FROM td_suscripciones_ahjr
+                WHERE id_usuario_suscripcion_ahjr = :uid 
+                    AND estado_ahjr = 'activa'
+                GROUP BY metodo_pago_ahjr
                 ORDER BY total DESC";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['uid' => $uid]);
 
         return $stmt->fetchAll();
+    }
+
+    /**
+     * NUEVO: Obtiene gasto mensual estimado
+     * Suma de costos mensuales + (costos anuales / 12)
+     */
+    public function obtenerGastoMensualEstimado(int $uid): float
+    {
+        // 1. Sumar mensuales
+        $sqlMensual = "SELECT COALESCE(SUM(costo_ahjr), 0) as total
+                       FROM td_suscripciones_ahjr
+                       WHERE id_usuario_suscripcion_ahjr = :uid
+                       AND estado_ahjr = 'activa'
+                       AND frecuencia_ahjr = 'mensual'";
+
+        $stmtMensual = $this->db->prepare($sqlMensual);
+        $stmtMensual->execute(['uid' => $uid]);
+        $totalMensual = (float) $stmtMensual->fetch()['total'];
+
+        // 2. Sumar anuales y dividir por 12
+        $sqlAnual = "SELECT COALESCE(SUM(costo_ahjr), 0) as total
+                     FROM td_suscripciones_ahjr
+                     WHERE id_usuario_suscripcion_ahjr = :uid
+                     AND estado_ahjr = 'activa'
+                     AND frecuencia_ahjr = 'anual'";
+
+        $stmtAnual = $this->db->prepare($sqlAnual);
+        $stmtAnual->execute(['uid' => $uid]);
+        $totalAnual = (float) $stmtAnual->fetch()['total'];
+
+        return $totalMensual + ($totalAnual / 12);
+    }
+
+    /**
+     * NUEVO: Obtiene distribución por frecuencia (para Donut Chart)
+     */
+    public function obtenerDistribucionFrecuencia(int $uid): array
+    {
+        $sql = "SELECT 
+                    frecuencia_ahjr,
+                    COUNT(*) as total
+                FROM td_suscripciones_ahjr
+                WHERE id_usuario_suscripcion_ahjr = :uid
+                AND estado_ahjr = 'activa'
+                GROUP BY frecuencia_ahjr";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['uid' => $uid]);
+
+        return $stmt->fetchAll(PDO::FETCH_KEY_PAIR); // Retorna ['mensual' => 5, 'anual' => 1]
+    }
+    /**
+     * NUEVO: Obtiene las N suscripciones más costosas
+     */
+    public function obtenerTopSuscripciones(int $uid, int $limit): array
+    {
+        $sql = "SELECT 
+                    nombre_servicio_ahjr as nombre,
+                    costo_ahjr as costo
+                FROM td_suscripciones_ahjr
+                WHERE id_usuario_suscripcion_ahjr = :uid
+                AND estado_ahjr = 'activa'
+                ORDER BY costo_ahjr DESC
+                LIMIT :limit";
+
+        $stmt = $this->db->prepare($sql);
+        // Bind manual para LIMIT (PDO a veces da problemas con strings en LIMIT)
+        $stmt->bindValue(':uid', $uid, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

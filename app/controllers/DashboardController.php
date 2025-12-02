@@ -39,7 +39,9 @@ class DashboardController
             $payload = [
                 'resumen' => $this->service->generarResumen($uid),
                 'grafica_mensual' => $this->service->prepararDatosGraficaMensual($uid),
-                'distribucion_metodos' => $this->service->prepararDistribucionMetodos($uid)
+                'distribucion' => $this->service->prepararDistribucionFrecuencia($uid),
+                'distribucion_metodos' => $this->service->prepararDistribucionMetodos($uid),
+                'top_3_costosas' => $this->service->obtenerTop3Costosas($uid)
             ];
 
             Response::ok_ahjr($payload);

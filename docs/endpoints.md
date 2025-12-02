@@ -363,6 +363,14 @@ Lista todas las suscripciones.
 }
 ```
 
+> 💡 **Nota de Implementación:**
+>
+> - `dias_restantes`: Entero positivo (días faltantes) o negativo (días de retraso).
+> - **Lógica de Colores (Frontend):**
+>   - **Verde:** > 7 días
+>   - **Amarillo:** 3 - 7 días
+>   - **Rojo:** < 3 días
+
 ---
 
 ### POST `/api/suscripciones`
@@ -506,7 +514,14 @@ Cambia el estado (Activar/Desactivar).
   "status": 200,
   "success": true,
   "message": "Estado actualizado correctamente.",
-  "data": null
+  "data": {
+    "id": 1,
+    "nombre_servicio": "Netflix",
+    "costo": 99.99,
+    "estado": "activa",
+    "frecuencia": "anual",
+    "fecha_proximo_pago": "2026-12-02"
+  }
 }
 ```
 
@@ -535,13 +550,18 @@ Simula un pago manual (Rol Beta/Admin).
 }
 ```
 
+> 💡 **Nota de Implementación:**
+>
+> - Esta función solo está disponible para usuarios con rol `beta` o `admin`.
+> - Útil para probar la generación de historial y gráficas sin esperar fechas reales.
+
 ---
 
 ## Módulo: Dashboard
 
 ### GET `/api/dashboard`
 
-Obtiene analytics.
+Obtiene analytics completos para el dashboard principal.
 
 **Response:** `200 OK`
 
@@ -552,17 +572,112 @@ Obtiene analytics.
   "message": "Datos del dashboard",
   "data": {
     "resumen": {
-      "total_activas": 5,
-      "gasto_mes_actual": 89.95
+      "total_activas": 7,
+      "gasto_mes_actual": 89.95,
+      "gasto_mensual_estimado": 65.45,
+      "proyeccion_anual": 785.4,
+      "mayor_gasto": {
+        "nombre": "Google One",
+        "costo": 29.99
+      },
+      "proximo_vencimiento": {
+        "id": 5,
+        "nombre_servicio": "Spotify",
+        "fecha": "2024-12-05",
+        "monto": 11.49
+      }
     },
     "grafica_mensual": {
-      "labels": ["Jun", "Jul", "Ago"],
-      "data": [75.48, 82.45, 89.95]
+      "labels": [
+        "Jul 2024",
+        "Ago 2024",
+        "Sep 2024",
+        "Oct 2024",
+        "Nov 2024",
+        "Dic 2024"
+      ],
+      "data": [45.0, 48.5, 50.0, 55.0, 60.0, 75.48]
+    },
+    "distribucion": {
+      "labels": ["Mensual", "Anual"],
+      "data": [5, 2]
     },
     "distribucion_metodos": {
       "labels": ["Visa", "PayPal"],
       "data": [450.0, 320.5]
+    },
+    "top_3_costosas": [
+      {
+        "nombre": "Google One",
+        "costo": 29.99
+      },
+      {
+        "nombre": "Disney+",
+        "costo": 16.99
+      },
+      {
+        "nombre": "Spotify",
+        "costo": 11.49
+      }
+    ]
+  }
+}
+```
+
+> 💡 **Notas de Implementación:**
+>
+> - **Smart Start (Gráfica Mensual):** Los arrays `labels` y `data` pueden tener longitud variable. El sistema recorta automáticamente los meses vacíos al inicio del año, comenzando desde el primer mes con actividad (gasto > 0) o mostrando los últimos 3 meses si no hay actividad reciente.
+> - **Lógica Híbrida:** El gasto del mes actual combina historial real + proyecciones de pagos pendientes.
+
+---
+
+## Módulo: Home
+
+### GET `/api/home`
+
+Obtiene datos resumidos para la vista de inicio (Home), enfocada en urgencia financiera y distribución semanal.
+
+**Response:** `200 OK`
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "data": {
+    "semaforo": {
+      "gasto_7_dias": 45.0,
+      "proximo_gran_cargo": {
+        "nombre": "Adobe Creative Cloud",
+        "monto": 59.99,
+        "fecha": "2024-12-15"
+      },
+      "total_suscripciones": 8
+    },
+    "proximos_vencimientos": [
+      {
+        "id_suscripcion_ahjr": 12,
+        "nombre_servicio_ahjr": "Netflix",
+        "costo_ahjr": 15.99,
+        "fecha_proximo_pago_ahjr": "2024-12-03",
+        "dias_restantes": 1
+      },
+      {
+        "id_suscripcion_ahjr": 5,
+        "nombre_servicio_ahjr": "Spotify",
+        "costo_ahjr": 11.49,
+        "fecha_proximo_pago_ahjr": "2024-12-05",
+        "dias_restantes": 3
+      }
+    ],
+    "gasto_semanal": {
+      "labels": ["Semana 1", "Semana 2", "Semana 3", "Semana 4"],
+      "data": [10.0, 0.0, 45.5, 12.0]
     }
   }
 }
 ```
+
+> 💡 **Notas de Implementación:**
+>
+> - **Semáforo:** Indicadores rápidos de salud financiera. `gasto_7_dias` es la suma de pagos programados para la próxima semana.
+> - **Gasto Semanal:** Distribución del gasto proyectado para el mes actual, dividido en 4 semanas.

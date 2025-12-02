@@ -12,6 +12,7 @@ use App\controllers\UsuarioController;
 use App\controllers\SuscripcionController;
 use App\controllers\SuscripcionOperacionesController;
 use App\controllers\DashboardController;
+use App\controllers\HomeController;
 use App\controllers\DebugController;
 use App\core\Response;
 
@@ -24,6 +25,7 @@ $usuarioController = new UsuarioController();
 $suscripcionController = new SuscripcionController();
 $operacionesController = new SuscripcionOperacionesController();
 $dashboardController = new DashboardController();
+$homeController = new HomeController();
 $debugController = new DebugController();
 
 // =============================================================================
@@ -60,7 +62,8 @@ $router_ahjr->add_ahjr('GET', '/', function () {
                 "POST /api/suscripciones/{id}/simular-pago" => "Simular pago (solo beta/admin)"
             ],
             "Dashboard" => [
-                "GET /api/dashboard" => "Obtener datos analíticos y gráficas"
+                "GET /api/dashboard" => "Obtener datos analíticos y gráficas",
+                "GET /api/home" => "Obtener datos para la vista principal (Home)"
             ]
         ]
     ]);
@@ -199,6 +202,11 @@ $router_ahjr->add_ahjr('POST', '/api/suscripciones/(\d+)/simular-pago', function
 // GET /api/dashboard - Obtener datos analíticos para gráficas
 $router_ahjr->add_ahjr('GET', '/api/dashboard', function () use ($dashboardController) {
     $dashboardController->index();
+});
+
+// GET /api/home - Obtener datos para la vista principal
+$router_ahjr->add_ahjr('GET', '/api/home', function () use ($homeController) {
+    $homeController->index();
 });
 
 // =============================================================================

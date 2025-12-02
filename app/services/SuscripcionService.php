@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\services;
 
 use App\models\SuscripcionModel;
+use App\models\SuscripcionOperacionesModel;
 use App\services\AlertsService;
 use Exception;
 
@@ -16,11 +17,13 @@ use Exception;
 class SuscripcionService
 {
     private SuscripcionModel $model;
+    private SuscripcionOperacionesModel $operacionesModel;
     private AlertsService $alerts;
 
     public function __construct()
     {
         $this->model = new SuscripcionModel();
+        $this->operacionesModel = new SuscripcionOperacionesModel();
         $this->alerts = new AlertsService();
     }
 
@@ -60,6 +63,26 @@ class SuscripcionService
         ];
 
         $id = $this->model->crear($datos);
+
+        // --- LÓGICA DE PAGO HISTÓRICO ---
+        // Recuperar la suscripción recién creada para ver qué calculó el SP
+        $suscripcionCreada = $this->model->obtener($id, $userId);
+
+        if ($suscripcionCreada && !empty($suscripcionCreada['fecha_ultimo_pago_ahjr'])) {
+            $fechaUltimoPago = $suscripcionCreada['fecha_ultimo_pago_ahjr'];
+            $hoy = date('Y-m-d');
+
+            // Si la fecha de último pago es hoy o anterior, registrar en historial
+            if ($fechaUltimoPago <= $hoy) {
+                $this->operacionesModel->registrarPagoHistoricoManual(
+                    $id,
+                    (float) $datos['costo'],
+                    $fechaUltimoPago,
+                    $datos['metodo_pago']
+                );
+            }
+        }
+        // --------------------------------
 
         // Notificar creación
         try {

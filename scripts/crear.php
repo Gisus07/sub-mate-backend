@@ -317,6 +317,13 @@ try {
     $stmt_check->execute(['email' => 'beta@submate.app']);
     $beta_user = $stmt_check->fetch();
 
+    // FORCE RESET FOR BETA USER
+    if ($beta_user) {
+        echo "  ⚠ Usuario Beta existente encontrado. Eliminando para regenerar datos...\n";
+        $pdo_ahjr->prepare("DELETE FROM td_usuarios_ahjr WHERE id_ahjr = :id")->execute(['id' => $beta_user['id_ahjr']]);
+        $beta_user = false; // Force re-creation
+    }
+
     if (!$beta_user) {
         $hash_beta = password_hash('Beta123!', PASSWORD_BCRYPT);
         $pdo_ahjr->prepare("INSERT INTO td_usuarios_ahjr (nombre_ahjr, apellido_ahjr, email_ahjr, clave_ahjr, estado_ahjr, rol_ahjr)
@@ -333,57 +340,143 @@ try {
         // Crear suscripciones para Beta
         echo "  ► Creando suscripciones de prueba para Beta...\n";
 
-        // Netflix
-        $fecha_pago_netflix = date('Y-m-15');
-        $fecha_proximo_netflix = date('Y-m-15', strtotime('+1 month'));
+        // Función helper para insertar suscripción
+        $insertSub = function ($nombre, $costo, $frecuencia, $metodo, $dia, $mes, $estado, $ultimo_pago, $proximo_pago) use ($pdo_ahjr, $beta_id) {
+            $pdo_ahjr->prepare("INSERT INTO td_suscripciones_ahjr 
+                (id_usuario_suscripcion_ahjr, nombre_servicio_ahjr, costo_ahjr, frecuencia_ahjr, metodo_pago_ahjr, dia_cobro_ahjr, mes_cobro_ahjr, estado_ahjr, fecha_ultimo_pago_ahjr, fecha_proximo_pago_ahjr)
+                VALUES (:id_user, :nombre, :costo, :frecuencia, :metodo, :dia, :mes, :estado, :fecha_pago, :fecha_proximo)")
+                ->execute([
+                    'id_user' => $beta_id,
+                    'nombre' => $nombre,
+                    'costo' => $costo,
+                    'frecuencia' => $frecuencia,
+                    'metodo' => $metodo,
+                    'dia' => $dia,
+                    'mes' => $mes,
+                    'estado' => $estado,
+                    'fecha_pago' => $ultimo_pago,
+                    'fecha_proximo' => $proximo_pago
+                ]);
+            return $pdo_ahjr->lastInsertId();
+        };
 
-        $pdo_ahjr->prepare("INSERT INTO td_suscripciones_ahjr 
-            (id_usuario_suscripcion_ahjr, nombre_servicio_ahjr, costo_ahjr, frecuencia_ahjr, metodo_pago_ahjr, dia_cobro_ahjr, mes_cobro_ahjr, fecha_ultimo_pago_ahjr, fecha_proximo_pago_ahjr)
-            VALUES (:id_user, :nombre, :costo, :frecuencia, :metodo, :dia, :mes, :fecha_pago, :fecha_proximo)")
-            ->execute([
-                'id_user' => $beta_id,
-                'nombre' => 'Netflix',
-                'costo' => 7.99,
-                'frecuencia' => 'mensual',
-                'metodo' => 'Visa',
-                'dia' => 15,
-                'mes' => null,
-                'fecha_pago' => $fecha_pago_netflix,
-                'fecha_proximo' => $fecha_proximo_netflix
-            ]);
-        $netflix_id = $pdo_ahjr->lastInsertId();
-
-        // Spotify
-        $fecha_pago_spotify = date('Y-m-05');
-        $fecha_proximo_spotify = date('Y-m-05', strtotime('+1 month'));
-
-        $pdo_ahjr->prepare("INSERT INTO td_suscripciones_ahjr 
-            (id_usuario_suscripcion_ahjr, nombre_servicio_ahjr, costo_ahjr, frecuencia_ahjr, metodo_pago_ahjr, dia_cobro_ahjr, mes_cobro_ahjr, fecha_ultimo_pago_ahjr, fecha_proximo_pago_ahjr)
-            VALUES (:id_user, :nombre, :costo, :frecuencia, :metodo, :dia, :mes, :fecha_pago, :fecha_proximo)")
-            ->execute([
-                'id_user' => $beta_id,
-                'nombre' => 'Spotify',
-                'costo' => 11.49,
-                'frecuencia' => 'mensual',
-                'metodo' => 'PayPal',
-                'dia' => 5,
-                'mes' => null,
-                'fecha_pago' => $fecha_pago_spotify,
-                'fecha_proximo' => $fecha_proximo_spotify
-            ]);
-        $spotify_id = $pdo_ahjr->lastInsertId();
-
-        // Crear historial de pagos (últimos 6 meses)
-        echo "  ► Creando historial de pagos (6 meses)...\n";
-        for ($i = 5; $i >= 0; $i--) {
-            // Historial Netflix
+        // Función helper para insertar historial
+        $insertHistorial = function ($sub_id, $monto, $fecha, $metodo) use ($pdo_ahjr) {
             $pdo_ahjr->prepare("INSERT INTO td_historial_pagos_ahjr (id_suscripcion_historial_ahjr, monto_pagado_ahjr, fecha_pago_ahjr, metodo_pago_snapshot_ahjr) VALUES (?, ?, ?, ?)")
-                ->execute([$netflix_id, 7.99, date('Y-m-15', strtotime("-$i months")), 'Visa']);
-            // Historial Spotify
-            $pdo_ahjr->prepare("INSERT INTO td_historial_pagos_ahjr (id_suscripcion_historial_ahjr, monto_pagado_ahjr, fecha_pago_ahjr, metodo_pago_snapshot_ahjr) VALUES (?, ?, ?, ?)")
-                ->execute([$spotify_id, 11.49, date('Y-m-05', strtotime("-$i months")), 'PayPal']);
+                ->execute([$sub_id, $monto, $fecha, $metodo]);
+        };
+
+        // Fecha base: Hoy (Simulada para consistencia, o usar real)
+        $today = new DateTime();
+        $currentYear = (int)$today->format('Y');
+        $currentMonth = (int)$today->format('n');
+
+        // --- 1. Netflix ($7.99 Mensual - Activa todo el año) ---
+        // Pagos: Ene a Dic (o hasta la fecha actual)
+        // Asumimos día de cobro 15
+        $netflix_id = $insertSub('Netflix', 7.99, 'mensual', 'Visa', 15, null, 'activa', date('Y-m-15', strtotime('last month')), date('Y-m-15'));
+        for ($m = 1; $m <= 12; $m++) {
+            $fechaPago = sprintf('%04d-%02d-15', $currentYear, $m);
+            if (strtotime($fechaPago) <= time()) {
+                $insertHistorial($netflix_id, 7.99, $fechaPago, 'Visa');
+            }
         }
-        echo "    ✓ 12 registros de historial creados\n";
+
+        // --- 2. Spotify ($11.49 Mensual - Activa todo el año) ---
+        // Día de cobro 5
+        $spotify_id = $insertSub('Spotify', 11.49, 'mensual', 'PayPal', 5, null, 'activa', date('Y-m-05'), date('Y-m-05', strtotime('+1 month')));
+        for ($m = 1; $m <= 12; $m++) {
+            $fechaPago = sprintf('%04d-%02d-05', $currentYear, $m);
+            if (strtotime($fechaPago) <= time()) {
+                $insertHistorial($spotify_id, 11.49, $fechaPago, 'PayPal');
+            }
+        }
+
+        // --- 3. Disney+ ($16.99 Mensual - Activa todo el año) ---
+        // Día de cobro 20
+        $disney_id = $insertSub('Disney+', 16.99, 'mensual', 'MasterCard', 20, null, 'activa', date('Y-m-20', strtotime('last month')), date('Y-m-20'));
+        for ($m = 1; $m <= 12; $m++) {
+            $fechaPago = sprintf('%04d-%02d-20', $currentYear, $m);
+            if (strtotime($fechaPago) <= time()) {
+                $insertHistorial($disney_id, 16.99, $fechaPago, 'MasterCard');
+            }
+        }
+
+        // --- 4. HBO Max ($9.99 Mensual - Activa todo el año) ---
+        // Día de cobro 10
+        $hbo_id = $insertSub('HBO Max', 9.99, 'mensual', 'Visa', 10, null, 'activa', date('Y-m-10', strtotime('last month')), date('Y-m-10'));
+        for ($m = 1; $m <= 12; $m++) {
+            $fechaPago = sprintf('%04d-%02d-10', $currentYear, $m);
+            if (strtotime($fechaPago) <= time()) {
+                $insertHistorial($hbo_id, 9.99, $fechaPago, 'Visa');
+            }
+        }
+
+        // --- 5. Crunchyroll ($9.99 Mensual - Activa todo el año) ---
+        // Día de cobro 25
+        $crunchy_id = $insertSub('Crunchyroll', 9.99, 'mensual', 'GPay', 25, null, 'activa', date('Y-m-25', strtotime('last month')), date('Y-m-25'));
+        for ($m = 1; $m <= 12; $m++) {
+            $fechaPago = sprintf('%04d-%02d-25', $currentYear, $m);
+            if (strtotime($fechaPago) <= time()) {
+                $insertHistorial($crunchy_id, 9.99, $fechaPago, 'GPay');
+            }
+        }
+
+        // --- 6. Amazon Prime ($9.99 Mensual - Inactiva) ---
+        // Activada Agosto, Pagada Ago y Sep, Desactivada Octubre
+        // Estado actual: Inactiva
+        $prime_id = $insertSub('Amazon Prime', 9.99, 'mensual', 'Visa', 1, null, 'inactiva', sprintf('%04d-09-01', $currentYear), null);
+        // Pagos: Agosto y Septiembre
+        $insertHistorial($prime_id, 9.99, sprintf('%04d-08-01', $currentYear), 'Visa');
+        $insertHistorial($prime_id, 9.99, sprintf('%04d-09-01', $currentYear), 'Visa');
+
+        // --- 7. Google One (Caso Complejo: Mensual -> Anual) ---
+        // Fase 1: Ene-Mar ($2.99 Mensual)
+        // Fase 2: Abril ($29.99 Anual) -> Activa Anual
+        // Estado actual: Activa, Anual
+        // Ultimo pago: Abril (Anual)
+        // Proximo pago: Abril del próximo año
+        $google_id = $insertSub('Google One', 29.99, 'anual', 'GPay', 15, 4, 'activa', sprintf('%04d-04-15', $currentYear), sprintf('%04d-04-15', $currentYear + 1));
+
+        // Historial Fase 1 (Mensual)
+        $insertHistorial($google_id, 2.99, sprintf('%04d-01-15', $currentYear), 'GPay');
+        $insertHistorial($google_id, 2.99, sprintf('%04d-02-15', $currentYear), 'GPay');
+        $insertHistorial($google_id, 2.99, sprintf('%04d-03-15', $currentYear), 'GPay');
+
+        // Historial Fase 2 (Anual)
+        $insertHistorial($google_id, 29.99, sprintf('%04d-04-15', $currentYear), 'GPay');
+
+        // --- 8. OpenAI Plus ($20.00 Mensual - Activa todo el año) ---
+        // Día de cobro 12
+        $openai_id = $insertSub('OpenAI Plus', 20.00, 'mensual', 'Visa', 12, null, 'activa', date('Y-m-12', strtotime('last month')), date('Y-m-12'));
+        for ($m = 1; $m <= 12; $m++) {
+            $fechaPago = sprintf('%04d-%02d-12', $currentYear, $m);
+            if (strtotime($fechaPago) <= time()) {
+                $insertHistorial($openai_id, 20.00, $fechaPago, 'Visa');
+            }
+        }
+
+        // --- 9. Adobe Creative Cloud ($54.99 Mensual - Activa todo el año) ---
+        // Día de cobro 1
+        $adobe_id = $insertSub('Adobe Creative Cloud', 54.99, 'mensual', 'MasterCard', 1, null, 'activa', date('Y-m-01', strtotime('last month')), date('Y-m-01'));
+        for ($m = 1; $m <= 12; $m++) {
+            $fechaPago = sprintf('%04d-%02d-01', $currentYear, $m);
+            if (strtotime($fechaPago) <= time()) {
+                $insertHistorial($adobe_id, 54.99, $fechaPago, 'MasterCard');
+            }
+        }
+
+        // --- 10. Notion ($10.00 Mensual - Activa todo el año) ---
+        // Día de cobro 8
+        $notion_id = $insertSub('Notion', 10.00, 'mensual', 'PayPal', 8, null, 'activa', date('Y-m-08', strtotime('last month')), date('Y-m-08'));
+        for ($m = 1; $m <= 12; $m++) {
+            $fechaPago = sprintf('%04d-%02d-08', $currentYear, $m);
+            if (strtotime($fechaPago) <= time()) {
+                $insertHistorial($notion_id, 10.00, $fechaPago, 'PayPal');
+            }
+        }
+
+        echo "    ✓ Suscripciones y historial detallado creados para Beta (10 suscripciones totales)\n";
     }
 
     // Usuario 3: Usuario normal
