@@ -6,6 +6,7 @@ namespace App\controllers;
 
 use App\core\Response;
 use App\core\Mailer;
+use App\core\Env;
 
 /**
  * DebugController
@@ -65,7 +66,18 @@ class DebugController
                 ]);
             } else {
                 error_log("DebugController::testEmail - Fallo al enviar correo a: {$email}");
-                Response::serverError_ahjr('No se pudo enviar el correo. Revisa los logs del servidor para más detalles.');
+                $debug = Env::get('SMTP_DEBUG');
+                $detail = Mailer::getLastError();
+                if ($debug === 'true' || $debug === '1') {
+                    Response::json_ahjr([
+                        'message' => 'No se pudo enviar el correo',
+                        'email' => $email,
+                        'error' => $detail ?? 'sin detalle',
+                        'timestamp' => date('Y-m-d H:i:s')
+                    ], 500);
+                } else {
+                    Response::serverError_ahjr('No se pudo enviar el correo. Revisa los logs del servidor para más detalles.');
+                }
             }
         } catch (\Exception $e) {
             error_log("DebugController::testEmail - Excepción al enviar correo: " . $e->getMessage());

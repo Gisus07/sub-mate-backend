@@ -4,9 +4,16 @@ namespace App\core;
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
+use App\core\Env;
 
 class Mailer
 {
+    private static ?string $lastError = null;
+
+    public static function getLastError(): ?string
+    {
+        return self::$lastError;
+    }
     /**
      * Función de envío central
      * 
@@ -18,33 +25,71 @@ class Mailer
     public static function sendEmail_AHJR(string $to_AHJR, string $subject_AHJR, string $bodyHTML_AHJR): bool
     {
         if (!class_exists(PHPMailer::class)) {
+            self::$lastError = 'PHPMailer no instalado';
             error_log('PHPMailer no instalado');
             return false;
         }
 
-        $host = getenv('SMTP_HOST');
-        $port = getenv('SMTP_PORT');
-        $user = getenv('SMTP_USER');
-        $pass = getenv('SMTP_PASS');
-        $secure = getenv('SMTP_SECURE');
-        $from = getenv('SMTP_FROM');
-        $fromName = getenv('SMTP_FROM_NAME');
+        if (!extension_loaded('openssl')) {
+            self::$lastError = 'Extensión openssl no cargada';
+            error_log('Extensión openssl no cargada');
+            return false;
+        }
+
+        $host = Env::get('SMTP_HOST') ?? Env::get('MAIL_HOST');
+        $port = Env::get('SMTP_PORT') ?? Env::get('MAIL_PORT');
+        $user = Env::get('SMTP_USER') ?? Env::get('MAIL_USERNAME');
+        $pass = Env::get('SMTP_PASS') ?? Env::get('MAIL_PASSWORD');
+        $secure = Env::get('SMTP_SECURE') ?? Env::get('MAIL_ENCRYPTION');
+        $from = Env::get('SMTP_FROM') ?? Env::get('MAIL_FROM') ?? $user;
+        $fromName = Env::get('SMTP_FROM_NAME') ?? Env::get('MAIL_FROM_NAME') ?? 'SubMate';
 
         if (!$host || !$port || !$user || !$pass) {
-            error_log('SMTP no configurado');
+            $faltantes = [];
+            if (!$host) { $faltantes[] = 'HOST'; }
+            if (!$port) { $faltantes[] = 'PORT'; }
+            if (!$user) { $faltantes[] = 'USER'; }
+            if (!$pass) { $faltantes[] = 'PASS'; }
+            self::$lastError = 'SMTP no configurado. Faltan: ' . implode(', ', $faltantes);
+            error_log('SMTP no configurado. Faltan: ' . implode(', ', $faltantes));
             return false;
+        }
+
+        if (!$secure) {
+            if ((int)$port === 587) {
+                $secure = 'tls';
+            } elseif ((int)$port === 465) {
+                $secure = 'ssl';
+            }
         }
 
         try {
             $mail = new PHPMailer(true);
             $mail->isSMTP();
-            $mail->Host = $host;
+            $forceIPv4 = Env::get('SMTP_FORCE_IPV4');
+            $mail->Host = ($forceIPv4 === 'true' || $forceIPv4 === '1') ? gethostbyname($host) : $host;
             $mail->SMTPAuth = true;
             $mail->Username = $user;
             $mail->Password = $pass;
             $mail->SMTPSecure = $secure;
             $mail->Port = (int)$port;
+            $mail->SMTPAutoTLS = true;
             $mail->CharSet = 'UTF-8';
+            $timeout = Env::get('SMTP_TIMEOUT');
+            if ($timeout) {
+                $mail->Timeout = (int)$timeout;
+            }
+
+            $skipVerify = Env::get('SMTP_SKIP_TLS_VERIFY');
+            if ($skipVerify === 'true' || $skipVerify === '1') {
+                $mail->SMTPOptions = [
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true,
+                    ],
+                ];
+            }
 
             // SMTP Debugging - Activar con SMTP_DEBUG=true en .env
             $debugMode = getenv('SMTP_DEBUG');
@@ -63,9 +108,16 @@ class Mailer
             $mail->Body = $bodyHTML_AHJR;
             $mail->AltBody = strip_tags($bodyHTML_AHJR);
 
-            return $mail->send();
+            $result = $mail->send();
+            if (!$result) {
+                self::$lastError = $mail->ErrorInfo;
+            } else {
+                self::$lastError = null;
+            }
+            return $result;
         } catch (Exception $e) {
-            error_log("Error enviando correo: {$mail->ErrorInfo}");
+            self::$lastError = isset($mail) ? $mail->ErrorInfo : $e->getMessage();
+            error_log("Error enviando correo: " . (self::$lastError ?? 'sin detalle'));
             return false;
         }
     }
