@@ -62,7 +62,8 @@ class DebugController
                 Response::ok_ahjr([
                     'message' => 'Correo de prueba enviado exitosamente',
                     'email' => $email,
-                    'timestamp' => date('Y-m-d H:i:s')
+                    'timestamp' => date('Y-m-d H:i:s'),
+                    'message_id' => Mailer::getLastMessageId()
                 ]);
             } else {
                 error_log("DebugController::testEmail - Fallo al enviar correo a: {$email}");

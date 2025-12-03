@@ -9,10 +9,16 @@ use App\core\Env;
 class Mailer
 {
     private static ?string $lastError = null;
+    private static ?string $lastMessageId = null;
 
     public static function getLastError(): ?string
     {
         return self::$lastError;
+    }
+
+    public static function getLastMessageId(): ?string
+    {
+        return self::$lastMessageId;
     }
     /**
      * Función de envío central
@@ -111,8 +117,10 @@ class Mailer
             $result = $mail->send();
             if (!$result) {
                 self::$lastError = $mail->ErrorInfo;
+                self::$lastMessageId = null;
             } else {
                 self::$lastError = null;
+                self::$lastMessageId = $mail->getLastMessageID();
             }
             return $result;
         } catch (Exception $e) {
