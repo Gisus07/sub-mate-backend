@@ -66,8 +66,7 @@ class Mailer
         try {
             $mail = new PHPMailer(true);
             $mail->isSMTP();
-            $forceIPv4 = Env::get('SMTP_FORCE_IPV4');
-            $mail->Host = ($forceIPv4 === 'true' || $forceIPv4 === '1') ? gethostbyname($host) : $host;
+            $mail->Host = $host;
             $mail->SMTPAuth = true;
             $mail->Username = $user;
             $mail->Password = $pass;
