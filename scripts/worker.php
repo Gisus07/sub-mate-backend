@@ -28,17 +28,16 @@ try {
     // ==================================================================
     echo "► FASE A: Generando tareas de recordatorio...\n";
 
-    // 1. Buscar suscripciones activas con pago próximo (15, 7, 3 días)
     $sql = "
         SELECT 
             s.id_suscripcion_ahjr,
             s.id_usuario_suscripcion_ahjr,
             s.fecha_proximo_pago_ahjr,
-            DATEDIFF(s.fecha_proximo_pago_ahjr, CURDATE()) as dias_restantes
+            s.frecuencia_ahjr,
+            s.dia_cobro_ahjr,
+            s.mes_cobro_ahjr
         FROM td_suscripciones_ahjr s
         WHERE s.estado_ahjr = 'activa'
-        AND s.fecha_proximo_pago_ahjr IS NOT NULL
-        HAVING dias_restantes IN (15, 7, 3)
     ";
 
     $stmt = $db->query($sql);
@@ -46,30 +45,67 @@ try {
 
     $tareasGeneradas = 0;
     foreach ($suscripciones as $sub) {
-        $dias = (int)$sub['dias_restantes'];
-        $tipoAlerta = "RECORDATORIO_{$dias}";
-        $fechaProgramada = date('Y-m-d'); // Enviar hoy mismo
+        $hoyTs = strtotime(date('Y-m-d'));
+        $targetDate = $sub['fecha_proximo_pago_ahjr'];
+        if (!$targetDate) {
+            $frecuencia = strtoupper($sub['frecuencia_ahjr']);
+            $dia = (int)$sub['dia_cobro_ahjr'];
+            $mes = $sub['mes_cobro_ahjr'] ? (int)$sub['mes_cobro_ahjr'] : null;
 
-        // Verificar si ya existe una tarea pendiente o enviada para esta suscripción y tipo hoy
-        // (Evitar duplicados si el worker corre varias veces)
+            $base = new DateTime();
+            if ($frecuencia === 'MENSUAL') {
+                $year = (int)$base->format('Y');
+                $month = (int)$base->format('n');
+                $dayToday = (int)$base->format('j');
+                if ($dayToday >= $dia) {
+                    $base->modify('+1 month');
+                    $year = (int)$base->format('Y');
+                    $month = (int)$base->format('n');
+                }
+                $lastDay = (int)$base->format('t');
+                $useDay = $dia > $lastDay ? $lastDay : $dia;
+                $targetDate = sprintf('%04d-%02d-%02d', $year, $month, $useDay);
+            } elseif ($frecuencia === 'ANUAL') {
+                $year = (int)$base->format('Y');
+                $month = $mes ?: (int)$base->format('n');
+                $dayToday = (int)$base->format('j');
+                $monthToday = (int)$base->format('n');
+                if ($monthToday > $month || ($monthToday === $month && $dayToday >= $dia)) {
+                    $year += 1;
+                }
+                $lastDay = (int)date('t', strtotime(sprintf('%04d-%02d-01', $year, $month)));
+                $useDay = $dia > $lastDay ? $lastDay : $dia;
+                $targetDate = sprintf('%04d-%02d-%02d', $year, $month, $useDay);
+            } else {
+                $targetDate = date('Y-m-d', strtotime('+1 week'));
+            }
+        }
+
+        $targetTs = strtotime($targetDate);
+        if ($targetTs === false || $targetTs < $hoyTs) {
+            continue;
+        }
+        $dias = (int)ceil(($targetTs - $hoyTs) / 86400);
+        if (!in_array($dias, [3, 7, 15], true)) {
+            continue;
+        }
+        $tipoAlerta = "RECORDATORIO_{$dias}";
+        $fechaProgramada = date('Y-m-d');
+
         $checkSql = "SELECT id_ahjr FROM td_email_pendientes_ahjr 
                      WHERE id_suscripcion_ahjr = :subId 
                      AND tipo_alerta_ahjr = :tipo 
                      AND fecha_envio_programada_ahjr = :fecha";
-
         $checkStmt = $db->prepare($checkSql);
         $checkStmt->execute([
             'subId' => $sub['id_suscripcion_ahjr'],
             'tipo' => $tipoAlerta,
             'fecha' => $fechaProgramada
         ]);
-
         if (!$checkStmt->fetch()) {
-            // Insertar tarea en la cola
             $insertSql = "INSERT INTO td_email_pendientes_ahjr 
                           (id_usuario_ahjr, id_suscripcion_ahjr, tipo_alerta_ahjr, fecha_envio_programada_ahjr, estado_ahjr)
                           VALUES (:userId, :subId, :tipo, :fecha, 'PENDIENTE')";
-
             $insertStmt = $db->prepare($insertSql);
             $insertStmt->execute([
                 'userId' => $sub['id_usuario_suscripcion_ahjr'],
