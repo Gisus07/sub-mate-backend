@@ -15,74 +15,82 @@ use Exception;
  */
 class UsuarioService
 {
-    private UsuarioModel $model;
+    private UsuarioModel $model_AHJR;
 
     public function __construct()
     {
-        $this->model = new UsuarioModel();
+        $this->model_AHJR = new UsuarioModel();
     }
 
     /**
      * 1. Obtiene perfil de usuario
      * Salida: array limpio sin sufijos _ahjr
      */
-    public function obtenerPerfil(int $id): array
+    public function obtenerPerfil_AHJR(int $id_AHJR): array
     {
-        $usuario = $this->model->obtenerPorId($id);
+        $usuario_AHJR = $this->model_AHJR->obtenerPorId_AHJR($id_AHJR);
 
-        if (!$usuario) {
+        if (!$usuario_AHJR) {
             throw new Exception('Usuario no encontrado.', 404);
         }
 
         // Limpiar sufijos _ahjr antes de devolver
-        return $this->limpiarSufijos($usuario);
+        return $this->limpiarSufijos_AHJR($usuario_AHJR);
     }
 
     /**
      * 2. Edita perfil de usuario
      * Entrada: datos limpios { "nombre": "Juan", ... }
      */
-    public function editarPerfil(int $id, array $datosLimpios): bool
+    public function editarPerfil_AHJR(int $id_AHJR, array $datosLimpios_AHJR): bool
     {
-        if (!$this->model->obtenerPorId($id)) {
+        if (!$this->model_AHJR->obtenerPorId_AHJR($id_AHJR)) {
             throw new Exception('Usuario no encontrado.', 404);
         }
 
         // Validar email único si se está cambiando
-        if (isset($datosLimpios['email'])) {
-            $existente = $this->model->buscarPorEmail($datosLimpios['email']);
-            if ($existente && (int)$existente['id_ahjr'] !== $id) {
+        if (isset($datosLimpios_AHJR['email'])) {
+            $existente_AHJR = $this->model_AHJR->buscarPorEmail_AHJR($datosLimpios_AHJR['email']);
+            if ($existente_AHJR && (int)$existente_AHJR['id_ahjr'] !== $id_AHJR) {
                 throw new Exception('Este correo ya está en uso.', 409);
             }
         }
 
         // Mapear a formato DB (agregar sufijos _ahjr)
-        $datosMapeados = [];
-        if (isset($datosLimpios['nombre'])) {
-            $datosMapeados['nombre_ahjr'] = $datosLimpios['nombre'];
+        $datosMapeados_AHJR = [];
+        if (isset($datosLimpios_AHJR['nombre'])) {
+            $datosMapeados_AHJR['nombre_ahjr'] = $datosLimpios_AHJR['nombre'];
         }
-        if (isset($datosLimpios['apellido'])) {
-            $datosMapeados['apellido_ahjr'] = $datosLimpios['apellido'];
+        if (isset($datosLimpios_AHJR['apellido'])) {
+            $datosMapeados_AHJR['apellido_ahjr'] = $datosLimpios_AHJR['apellido'];
         }
-        if (isset($datosLimpios['email'])) {
-            $datosMapeados['email_ahjr'] = strtolower(trim($datosLimpios['email']));
+        if (isset($datosLimpios_AHJR['email'])) {
+            $datosMapeados_AHJR['email_ahjr'] = strtolower(trim($datosLimpios_AHJR['email']));
         }
 
-        return $this->model->actualizar($id, $datosMapeados);
+        return $this->model_AHJR->actualizar_AHJR($id_AHJR, $datosMapeados_AHJR);
     }
 
     /**
      * 3. Cambia contraseña del usuario
      */
-    public function cambiarClave(int $id, string $nuevaClave): bool
+    public function cambiarClave_AHJR(int $id_AHJR, string $claveActual_AHJR, string $claveNueva_AHJR): bool
     {
-        if (!$this->model->obtenerPorId($id)) {
+        $usuario_AHJR = $this->model_AHJR->obtenerPorId_AHJR($id_AHJR);
+
+        if (!$usuario_AHJR) {
             throw new Exception('Usuario no encontrado.', 404);
         }
 
-        $hash = password_hash($nuevaClave, PASSWORD_BCRYPT);
+        // Verificar que la contraseña actual sea correcta
+        if (!password_verify($claveActual_AHJR, $usuario_AHJR['clave_ahjr'])) {
+            throw new Exception('La contraseña actual es incorrecta.', 401);
+        }
 
-        return $this->model->actualizar($id, ['clave_ahjr' => $hash]);
+        // Hash de la nueva contraseña
+        $hash_AHJR = password_hash($claveNueva_AHJR, PASSWORD_BCRYPT);
+
+        return $this->model_AHJR->actualizar_AHJR($id_AHJR, ['clave_ahjr' => $hash_AHJR]);
     }
 
     // ===== MÉTODOS PRIVADOS =====
@@ -90,16 +98,16 @@ class UsuarioService
     /**
      * Limpia sufijos _ahjr del array de BD
      */
-    private function limpiarSufijos(array $datos): array
+    private function limpiarSufijos_AHJR(array $datos_AHJR): array
     {
         return [
-            'id' => (int) $datos['id_ahjr'],
-            'nombre' => $datos['nombre_ahjr'],
-            'apellido' => $datos['apellido_ahjr'],
-            'email' => $datos['email_ahjr'],
-            'fecha_registro' => $datos['fecha_registro_ahjr'],
-            'estado' => $datos['estado_ahjr'],
-            'rol' => $datos['rol_ahjr']
+            'id' => (int) $datos_AHJR['id_ahjr'],
+            'nombre' => $datos_AHJR['nombre_ahjr'],
+            'apellido' => $datos_AHJR['apellido_ahjr'],
+            'email' => $datos_AHJR['email_ahjr'],
+            'fecha_registro' => $datos_AHJR['fecha_registro_ahjr'],
+            'estado' => $datos_AHJR['estado_ahjr'],
+            'rol' => $datos_AHJR['rol_ahjr']
         ];
     }
 }

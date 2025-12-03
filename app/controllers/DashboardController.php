@@ -16,13 +16,13 @@ use Exception;
  */
 class DashboardController
 {
-    private DashboardService $service;
-    private AuthMiddleware $middleware;
+    private DashboardService $service_AHJR;
+    private AuthMiddleware $middleware_AHJR;
 
     public function __construct()
     {
-        $this->service = new DashboardService();
-        $this->middleware = new AuthMiddleware();
+        $this->service_AHJR = new DashboardService();
+        $this->middleware_AHJR = new AuthMiddleware();
     }
 
     /**
@@ -32,22 +32,22 @@ class DashboardController
     {
         try {
             // Autenticar usuario
-            $usuario = $this->middleware->handle();
-            $uid = $usuario['sub'];
+            $usuario_AHJR = $this->middleware_AHJR->handle_AHJR();
+            $uid_AHJR = $usuario_AHJR['sub'];
 
             // Consolidar todos los datos
-            $payload = [
-                'resumen' => $this->service->generarResumen($uid),
-                'grafica_mensual' => $this->service->prepararDatosGraficaMensual($uid),
-                'distribucion' => $this->service->prepararDistribucionFrecuencia($uid),
-                'distribucion_metodos' => $this->service->prepararDistribucionMetodos($uid),
-                'top_3_costosas' => $this->service->obtenerTop3Costosas($uid)
+            $payload_AHJR = [
+                'resumen' => $this->service_AHJR->generarResumen_AHJR($uid_AHJR),
+                'grafica_mensual' => $this->service_AHJR->prepararDatosGraficaMensual_AHJR($uid_AHJR),
+                'distribucion' => $this->service_AHJR->prepararDistribucionFrecuencia_AHJR($uid_AHJR),
+                'distribucion_metodos' => $this->service_AHJR->prepararDistribucionMetodos_AHJR($uid_AHJR),
+                'top_3_costosas' => $this->service_AHJR->obtenerTop3Costosas_AHJR($uid_AHJR)
             ];
 
-            Response::ok_ahjr($payload);
+            Response::ok_ahjr($payload_AHJR);
         } catch (Exception $e) {
-            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-            Response::json_ahjr(['message' => $e->getMessage()], $status);
+            $status_AHJR = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status_AHJR);
         }
     }
 

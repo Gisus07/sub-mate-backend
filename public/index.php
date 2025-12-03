@@ -88,8 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 Env::loadEnv(__DIR__ . '/..');
 
 // Inicializar base de datos (Singleton)
-$database_ahjr = Database::getInstance();
-$db_ahjr = $database_ahjr->getConnection();
+$database_ahjr = Database::getInstance_AHJR();
+$db_ahjr = $database_ahjr->getConnection_AHJR();
 
 // Inicializar Router
 $router_ahjr = new Router();

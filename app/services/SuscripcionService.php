@@ -16,69 +16,69 @@ use Exception;
  */
 class SuscripcionService
 {
-    private SuscripcionModel $model;
-    private SuscripcionOperacionesModel $operacionesModel;
-    private AlertsService $alerts;
+    private SuscripcionModel $model_AHJR;
+    private SuscripcionOperacionesModel $operacionesModel_AHJR;
+    private AlertsService $alerts_AHJR;
 
     public function __construct()
     {
-        $this->model = new SuscripcionModel();
-        $this->operacionesModel = new SuscripcionOperacionesModel();
-        $this->alerts = new AlertsService();
+        $this->model_AHJR = new SuscripcionModel();
+        $this->operacionesModel_AHJR = new SuscripcionOperacionesModel();
+        $this->alerts_AHJR = new AlertsService();
     }
 
     /**
      * 1. Crea suscripción (mapper + validación)
      */
-    public function crear(array $datosLimpios, int $userId): array
+    public function crear_AHJR(array $datosLimpios_AHJR, int $userId_AHJR): array
     {
         // Validar campos requeridos
-        $requeridos = ['nombre_servicio', 'costo', 'frecuencia', 'metodo_pago', 'dia_cobro'];
-        foreach ($requeridos as $campo) {
-            if (!isset($datosLimpios[$campo])) {
-                throw new Exception("Campo {$campo} requerido.", 400);
+        $requeridos_AHJR = ['nombre_servicio', 'costo', 'frecuencia', 'metodo_pago', 'dia_cobro'];
+        foreach ($requeridos_AHJR as $campo_AHJR) {
+            if (!isset($datosLimpios_AHJR[$campo_AHJR])) {
+                throw new Exception("Campo {$campo_AHJR} requerido.", 400);
             }
         }
 
         // Verificar duplicados (Regla de Negocio)
-        $nombreNormalizado = strtolower(str_replace(' ', '', $datosLimpios['nombre_servicio']));
-        if ($this->model->buscarSuscripcionPorNombre($userId, $nombreNormalizado)) {
+        $nombreNormalizado_AHJR = strtolower(str_replace(' ', '', $datosLimpios_AHJR['nombre_servicio']));
+        if ($this->model_AHJR->buscarSuscripcionPorNombre_AHJR($userId_AHJR, $nombreNormalizado_AHJR)) {
             throw new Exception("Ya tienes una suscripción registrada con ese nombre.", 409);
         }
 
         // Preparar para SP (NO usa sufijos _ahjr, el SP los maneja internamente)
-        $mesCobro = $datosLimpios['mes_cobro'] ?? null;
-        if (strtolower($datosLimpios['frecuencia']) === 'mensual') {
-            $mesCobro = null;
+        $mesCobro_AHJR = $datosLimpios_AHJR['mes_cobro'] ?? null;
+        if (strtolower($datosLimpios_AHJR['frecuencia']) === 'mensual') {
+            $mesCobro_AHJR = null;
         }
 
-        $datos = [
-            'id_usuario' => $userId,
-            'nombre_servicio' => $datosLimpios['nombre_servicio'],
-            'costo' => (float) $datosLimpios['costo'],
-            'frecuencia' => $datosLimpios['frecuencia'],
-            'metodo_pago' => $datosLimpios['metodo_pago'],
-            'dia_cobro' => (int) $datosLimpios['dia_cobro'],
-            'mes_cobro' => $mesCobro
+        $datos_AHJR = [
+            'id_usuario' => $userId_AHJR,
+            'nombre_servicio' => $datosLimpios_AHJR['nombre_servicio'],
+            'costo' => (float) $datosLimpios_AHJR['costo'],
+            'frecuencia' => $datosLimpios_AHJR['frecuencia'],
+            'metodo_pago' => $datosLimpios_AHJR['metodo_pago'],
+            'dia_cobro' => (int) $datosLimpios_AHJR['dia_cobro'],
+            'mes_cobro' => $mesCobro_AHJR
         ];
 
-        $id = $this->model->crear($datos);
+        $id_AHJR = $this->model_AHJR->crear_AHJR($datos_AHJR);
 
         // --- LÓGICA DE PAGO HISTÓRICO ---
         // Recuperar la suscripción recién creada para ver qué calculó el SP
-        $suscripcionCreada = $this->model->obtener($id, $userId);
+        $suscripcionCreada_AHJR = $this->model_AHJR->obtener_AHJR($id_AHJR, $userId_AHJR);
 
-        if ($suscripcionCreada && !empty($suscripcionCreada['fecha_ultimo_pago_ahjr'])) {
-            $fechaUltimoPago = $suscripcionCreada['fecha_ultimo_pago_ahjr'];
-            $hoy = date('Y-m-d');
+        if ($suscripcionCreada_AHJR && !empty($suscripcionCreada_AHJR['fecha_ultimo_pago_ahjr'])) {
+            $fechaUltimoPago_AHJR = $suscripcionCreada_AHJR['fecha_ultimo_pago_ahjr'];
+            $hoy_AHJR = date('Y-m-d');
 
             // Si la fecha de último pago es hoy o anterior, registrar en historial
-            if ($fechaUltimoPago <= $hoy) {
-                $this->operacionesModel->registrarPagoHistoricoManual(
-                    $id,
-                    (float) $datos['costo'],
-                    $fechaUltimoPago,
-                    $datos['metodo_pago']
+            if ($fechaUltimoPago_AHJR <= $hoy_AHJR) {
+                $this->operacionesModel_AHJR->registrarPagoHistoricoManual_AHJR(
+                    $id_AHJR,
+                    (float) $datos_AHJR['costo'],
+                    $fechaUltimoPago_AHJR,
+                    $datos_AHJR['metodo_pago']
                 );
             }
         }
@@ -86,253 +86,253 @@ class SuscripcionService
 
         // Notificar creación
         try {
-            $this->alerts->enviarSuscripcionCreada($datos);
+            $this->alerts_AHJR->enviarSuscripcionCreada_AHJR($datos_AHJR);
         } catch (Exception $e) {
             // No bloquear el flujo si falla el correo
             error_log("Error enviando alerta de creación: " . $e->getMessage());
         }
 
-        return ['id' => $id];
+        return ['id' => $id_AHJR];
     }
 
     /**
      * 2. Obtiene lista de suscripciones (mapper de salida)
      */
-    public function obtenerLista(int $userId): array
+    public function obtenerLista_AHJR(int $userId_AHJR): array
     {
-        $suscripciones = $this->model->listarPorUsuario($userId);
-        return array_map([$this, 'limpiarSufijos'], $suscripciones);
+        $suscripciones_AHJR = $this->model_AHJR->listarPorUsuario_AHJR($userId_AHJR);
+        return array_map([$this, 'limpiarSufijos_AHJR'], $suscripciones_AHJR);
     }
 
     /**
      * 3. Obtiene detalle de suscripción
      */
-    public function obtenerDetalle(int $id, int $userId): array
+    public function obtenerDetalle_AHJR(int $id_AHJR, int $userId_AHJR): array
     {
-        $suscripcion = $this->model->obtener($id, $userId);
+        $suscripcion_AHJR = $this->model_AHJR->obtener_AHJR($id_AHJR, $userId_AHJR);
 
-        if (!$suscripcion) {
+        if (!$suscripcion_AHJR) {
             throw new Exception('Suscripción no encontrada.', 404);
         }
 
-        return $this->limpiarSufijos($suscripcion);
+        return $this->limpiarSufijos_AHJR($suscripcion_AHJR);
     }
 
     /**
      * 4. Modifica suscripción
      */
-    public function modificar(int $id, array $datosLimpios, int $userId): bool
+    public function modificar_AHJR(int $id_AHJR, array $datosLimpios_AHJR, int $userId_AHJR): bool
     {
         // Verificar propiedad
-        $suscripcion = $this->model->obtener($id, $userId);
-        if (!$suscripcion) {
+        $suscripcion_AHJR = $this->model_AHJR->obtener_AHJR($id_AHJR, $userId_AHJR);
+        if (!$suscripcion_AHJR) {
             throw new Exception('Suscripción no encontrada.', 404);
         }
 
         // BLOQUEO CRÍTICO: No permitir cambio de nombre
-        if (isset($datosLimpios['nombre_servicio'])) {
-            $nombreActual = strtolower(str_replace(' ', '', $suscripcion['nombre_servicio_ahjr']));
-            $nombreNuevo = strtolower(str_replace(' ', '', $datosLimpios['nombre_servicio']));
+        if (isset($datosLimpios_AHJR['nombre_servicio'])) {
+            $nombreActual_AHJR = strtolower(str_replace(' ', '', $suscripcion_AHJR['nombre_servicio_ahjr']));
+            $nombreNuevo_AHJR = strtolower(str_replace(' ', '', $datosLimpios_AHJR['nombre_servicio']));
 
-            if ($nombreActual !== $nombreNuevo) {
+            if ($nombreActual_AHJR !== $nombreNuevo_AHJR) {
                 throw new Exception("No se permite cambiar el nombre del servicio.", 400);
             }
         }
 
         // Mapear a formato DB
-        $datosMapeados = [];
+        $datosMapeados_AHJR = [];
         // NOTA: nombre_servicio NO se agrega a $datosMapeados para asegurar que no cambie
 
-        if (isset($datosLimpios['costo'])) {
-            $datosMapeados['costo_ahjr'] = (float) $datosLimpios['costo'];
+        if (isset($datosLimpios_AHJR['costo'])) {
+            $datosMapeados_AHJR['costo_ahjr'] = (float) $datosLimpios_AHJR['costo'];
         }
-        if (isset($datosLimpios['metodo_pago'])) {
-            $datosMapeados['metodo_pago_ahjr'] = $datosLimpios['metodo_pago'];
+        if (isset($datosLimpios_AHJR['metodo_pago'])) {
+            $datosMapeados_AHJR['metodo_pago_ahjr'] = $datosLimpios_AHJR['metodo_pago'];
         }
-        if (isset($datosLimpios['dia_cobro'])) {
-            $datosMapeados['dia_cobro_ahjr'] = (int) $datosLimpios['dia_cobro'];
+        if (isset($datosLimpios_AHJR['dia_cobro'])) {
+            $datosMapeados_AHJR['dia_cobro_ahjr'] = (int) $datosLimpios_AHJR['dia_cobro'];
         }
 
         // Lógica para mes_cobro y frecuencia
-        $frecuenciaOriginal = strtolower($suscripcion['frecuencia_ahjr']);
-        $nuevaFrecuencia = isset($datosLimpios['frecuencia']) ? strtolower($datosLimpios['frecuencia']) : $frecuenciaOriginal;
+        $frecuenciaOriginal_AHJR = strtolower($suscripcion_AHJR['frecuencia_ahjr']);
+        $nuevaFrecuencia_AHJR = isset($datosLimpios_AHJR['frecuencia']) ? strtolower($datosLimpios_AHJR['frecuencia']) : $frecuenciaOriginal_AHJR;
 
-        if (isset($datosLimpios['frecuencia'])) {
-            $datosMapeados['frecuencia_ahjr'] = $datosLimpios['frecuencia'];
+        if (isset($datosLimpios_AHJR['frecuencia'])) {
+            $datosMapeados_AHJR['frecuencia_ahjr'] = $datosLimpios_AHJR['frecuencia'];
         }
 
-        if ($nuevaFrecuencia === 'mensual') {
-            $datosMapeados['mes_cobro_ahjr'] = null;
-        } elseif (isset($datosLimpios['mes_cobro'])) {
-            $datosMapeados['mes_cobro_ahjr'] = (int) $datosLimpios['mes_cobro'];
+        if ($nuevaFrecuencia_AHJR === 'mensual') {
+            $datosMapeados_AHJR['mes_cobro_ahjr'] = null;
+        } elseif (isset($datosLimpios_AHJR['mes_cobro'])) {
+            $datosMapeados_AHJR['mes_cobro_ahjr'] = (int) $datosLimpios_AHJR['mes_cobro'];
         }
 
         // RECÁLCULO CONDICIONAL: Solo si cambia la frecuencia Y está activa
-        if ($nuevaFrecuencia !== $frecuenciaOriginal && strtolower($suscripcion['estado_ahjr']) === 'activa') {
+        if ($nuevaFrecuencia_AHJR !== $frecuenciaOriginal_AHJR && strtolower($suscripcion_AHJR['estado_ahjr']) === 'activa') {
             // Usar el día de cobro nuevo o el existente
-            $diaCobroCalc = isset($datosMapeados['dia_cobro_ahjr']) ? $datosMapeados['dia_cobro_ahjr'] : (int)$suscripcion['dia_cobro_ahjr'];
+            $diaCobroCalc_AHJR = isset($datosMapeados_AHJR['dia_cobro_ahjr']) ? $datosMapeados_AHJR['dia_cobro_ahjr'] : (int)$suscripcion_AHJR['dia_cobro_ahjr'];
 
             // Recalcular fecha próximo pago
-            $datosMapeados['fecha_proximo_pago_ahjr'] = $this->calcularProximoPago($nuevaFrecuencia, $diaCobroCalc);
+            $datosMapeados_AHJR['fecha_proximo_pago_ahjr'] = $this->calcularProximoPago_AHJR($nuevaFrecuencia_AHJR, $diaCobroCalc_AHJR);
         }
         // Si la frecuencia NO cambia, NO se tocan las fechas (ni proximo ni ultimo pago)
 
-        if (empty($datosMapeados)) {
+        if (empty($datosMapeados_AHJR)) {
             return true; // Nada que actualizar
         }
 
-        $resultado = $this->model->editar($id, $datosMapeados);
+        $resultado_AHJR = $this->model_AHJR->editar_AHJR($id_AHJR, $datosMapeados_AHJR);
 
-        if ($resultado) {
+        if ($resultado_AHJR) {
             // Notificar edición
             try {
                 // Fusionar datos para el correo
-                $datosCompletos = array_merge($suscripcion, $datosMapeados);
+                $datosCompletos_AHJR = array_merge($suscripcion_AHJR, $datosMapeados_AHJR);
                 // Asegurar que nombre_servicio esté disponible (ya que no cambia)
-                $datosCompletos['nombre_servicio'] = $suscripcion['nombre_servicio_ahjr'];
-                $this->alerts->enviarSuscripcionEditada($datosCompletos);
+                $datosCompletos_AHJR['nombre_servicio'] = $suscripcion_AHJR['nombre_servicio_ahjr'];
+                $this->alerts_AHJR->enviarSuscripcionEditada_AHJR($datosCompletos_AHJR);
             } catch (Exception $e) {
                 error_log("Error enviando alerta de edición: " . $e->getMessage());
             }
         }
 
-        return $resultado;
+        return $resultado_AHJR;
     }
 
     /**
-     * 5. Elimina suscripción (borrar)
+     * 5. Elimina suscripción
      */
-    public function borrar(int $id, int $userId): bool
+    public function borrar_AHJR(int $id_AHJR, int $userId_AHJR): bool
     {
         // Verificar propiedad
-        $suscripcion = $this->model->obtener($id, $userId);
-        if (!$suscripcion) {
+        $suscripcion_AHJR = $this->model_AHJR->obtener_AHJR($id_AHJR, $userId_AHJR);
+        if (!$suscripcion_AHJR) {
             throw new Exception('Suscripción no encontrada.', 404);
         }
 
-        $resultado = $this->model->eliminar($id);
+        $resultado_AHJR = $this->model_AHJR->eliminar_AHJR($id_AHJR);
 
-        if ($resultado) {
+        if ($resultado_AHJR) {
             // Notificar eliminación
             try {
-                $this->alerts->enviarSuscripcionEliminada($suscripcion);
+                $this->alerts_AHJR->enviarSuscripcionEliminada_AHJR($suscripcion_AHJR);
             } catch (Exception $e) {
                 error_log("Error enviando alerta de eliminación: " . $e->getMessage());
             }
         }
 
-        return $resultado;
+        return $resultado_AHJR;
     }
 
     /**
      * 6. Cambia el estado de la suscripción (Activar/Desactivar)
      */
-    public function cambiarEstado(int $id, int $userId, string $nuevoEstado, ?int $diaCobro = null): array
+    public function cambiarEstado_AHJR(int $id_AHJR, int $userId_AHJR, string $nuevoEstado_AHJR, ?int $diaCobro_AHJR = null): array
     {
         // 1. Verificar propiedad y obtener estado actual
-        $suscripcion = $this->model->obtener($id, $userId);
-        if (!$suscripcion) {
+        $suscripcion_AHJR = $this->model_AHJR->obtener_AHJR($id_AHJR, $userId_AHJR);
+        if (!$suscripcion_AHJR) {
             throw new Exception('Suscripción no encontrada.', 404);
         }
 
-        $datosActualizar = [];
-        $nuevoEstadoInput = strtoupper($nuevoEstado); // Normalizar entrada
-        $estadoActual = $suscripcion['estado_ahjr']; // 'activa' o 'inactiva'
+        $datosActualizar_AHJR = [];
+        $nuevoEstadoInput_AHJR = strtoupper($nuevoEstado_AHJR); // Normalizar entrada
+        $estadoActual_AHJR = $suscripcion_AHJR['estado_ahjr']; // 'activa' o 'inactiva'
 
         // Mapeo de entrada a valor BD
-        $estadoDB = ($nuevoEstadoInput === 'ACTIVO') ? 'activa' : 'inactiva';
+        $estadoDB_AHJR = ($nuevoEstadoInput_AHJR === 'ACTIVO') ? 'activa' : 'inactiva';
 
         // Guardrail: Si el estado es el mismo, no hacer nada
-        if ($estadoDB === $estadoActual) {
-            return $this->limpiarSufijos($suscripcion);
+        if ($estadoDB_AHJR === $estadoActual_AHJR) {
+            return $this->limpiarSufijos_AHJR($suscripcion_AHJR);
         }
 
         // 2. Lógica según estado
-        if ($nuevoEstadoInput === 'INACTIVO') {
-            $datosActualizar['estado_ahjr'] = 'inactiva';
-            $datosActualizar['fecha_proximo_pago_ahjr'] = null;
-        } elseif ($nuevoEstadoInput === 'ACTIVO') {
-            $datosActualizar['estado_ahjr'] = 'activa';
-            $datosActualizar['fecha_ultimo_pago_ahjr'] = date('Y-m-d'); // Fecha actual
+        if ($nuevoEstadoInput_AHJR === 'INACTIVO') {
+            $datosActualizar_AHJR['estado_ahjr'] = 'inactiva';
+            $datosActualizar_AHJR['fecha_proximo_pago_ahjr'] = null;
+        } elseif ($nuevoEstadoInput_AHJR === 'ACTIVO') {
+            $datosActualizar_AHJR['estado_ahjr'] = 'activa';
+            $datosActualizar_AHJR['fecha_ultimo_pago_ahjr'] = date('Y-m-d'); // Fecha actual
 
             // Si se proporciona día de cobro, actualizarlo
-            if ($diaCobro !== null) {
-                $datosActualizar['dia_cobro_ahjr'] = $diaCobro;
+            if ($diaCobro_AHJR !== null) {
+                $datosActualizar_AHJR['dia_cobro_ahjr'] = $diaCobro_AHJR;
             }
 
             // Calcular próximo pago
-            $diaCobroCalc = $diaCobro ?? (int)$suscripcion['dia_cobro_ahjr'];
-            $frecuencia = $suscripcion['frecuencia_ahjr'];
+            $diaCobroCalc_AHJR = $diaCobro_AHJR ?? (int)$suscripcion_AHJR['dia_cobro_ahjr'];
+            $frecuencia_AHJR = $suscripcion_AHJR['frecuencia_ahjr'];
 
-            $datosActualizar['fecha_proximo_pago_ahjr'] = $this->calcularProximoPago($frecuencia, $diaCobroCalc);
+            $datosActualizar_AHJR['fecha_proximo_pago_ahjr'] = $this->calcularProximoPago_AHJR($frecuencia_AHJR, $diaCobroCalc_AHJR);
         } else {
-            throw new Exception("Estado no válido: {$nuevoEstado}", 400);
+            throw new Exception("Estado no válido: {$nuevoEstado_AHJR}", 400);
         }
 
         // 3. Guardar cambios
-        if (!$this->model->editar($id, $datosActualizar)) {
+        if (!$this->model_AHJR->editar_AHJR($id_AHJR, $datosActualizar_AHJR)) {
             throw new Exception("No se pudo actualizar el estado.", 500);
         }
 
         // Notificar cambio de estado (solo si se desactiva, según requerimiento)
         try {
-            if ($nuevoEstadoInput === 'INACTIVO') {
-                $this->alerts->enviarSuscripcionDesactivada($suscripcion);
+            if ($nuevoEstadoInput_AHJR === 'INACTIVO') {
+                $this->alerts_AHJR->enviarSuscripcionDesactivada_AHJR($suscripcion_AHJR);
             }
         } catch (Exception $e) {
             error_log("Error enviando alerta de estado: " . $e->getMessage());
         }
 
         // 4. Retornar suscripción actualizada
-        return $this->obtenerDetalle($id, $userId);
+        return $this->obtenerDetalle_AHJR($id_AHJR, $userId_AHJR);
     }
 
     // ===== MÉTODOS PRIVADOS =====
 
-    private function calcularProximoPago(string $frecuencia, int $diaCobro): string
+    private function calcularProximoPago_AHJR(string $frecuencia_AHJR, int $diaCobro_AHJR): string
     {
-        $fecha = new \DateTime(); // Hoy
-        $frecuencia = strtoupper($frecuencia);
+        $fecha_AHJR = new \DateTime(); // Hoy
+        $frecuencia_AHJR = strtoupper($frecuencia_AHJR);
 
-        if ($frecuencia === 'MENSUAL') {
-            $fecha->modify('+1 month');
-        } elseif ($frecuencia === 'ANUAL') {
-            $fecha->modify('+1 year');
-        } elseif ($frecuencia === 'SEMANAL') {
-            $fecha->modify('+1 week');
-            return $fecha->format('Y-m-d');
+        if ($frecuencia_AHJR === 'MENSUAL') {
+            $fecha_AHJR->modify('+1 month');
+        } elseif ($frecuencia_AHJR === 'ANUAL') {
+            $fecha_AHJR->modify('+1 year');
+        } elseif ($frecuencia_AHJR === 'SEMANAL') {
+            $fecha_AHJR->modify('+1 week');
+            return $fecha_AHJR->format('Y-m-d');
         }
 
         // Ajustar el día para Mensual/Anual
-        $year = (int)$fecha->format('Y');
-        $month = (int)$fecha->format('m');
+        $year_AHJR = (int)$fecha_AHJR->format('Y');
+        $month_AHJR = (int)$fecha_AHJR->format('m');
 
         // Validar si el día existe en ese mes (ej: 31 Feb)
-        if (!checkdate($month, $diaCobro, $year)) {
+        if (!checkdate($month_AHJR, $diaCobro_AHJR, $year_AHJR)) {
             // Si no existe, tomar el último día del mes
-            $diaCobro = (int)$fecha->format('t');
+            $diaCobro_AHJR = (int)$fecha_AHJR->format('t');
         }
 
-        $fecha->setDate($year, $month, $diaCobro);
+        $fecha_AHJR->setDate($year_AHJR, $month_AHJR, $diaCobro_AHJR);
 
-        return $fecha->format('Y-m-d');
+        return $fecha_AHJR->format('Y-m-d');
     }
 
-    private function limpiarSufijos(array $datos): array
+    private function limpiarSufijos_AHJR(array $datos_AHJR): array
     {
         return [
-            'id' => (int) $datos['id_suscripcion_ahjr'],
-            'nombre_servicio' => $datos['nombre_servicio_ahjr'],
-            'costo' => (float) $datos['costo_ahjr'],
-            'estado' => $datos['estado_ahjr'],
-            'frecuencia' => $datos['frecuencia_ahjr'],
-            'metodo_pago' => $datos['metodo_pago_ahjr'],
-            'dia_cobro' => $datos['dia_cobro_ahjr'] ? (int) $datos['dia_cobro_ahjr'] : null,
-            'mes_cobro' => $datos['mes_cobro_ahjr'] ? (int) $datos['mes_cobro_ahjr'] : null,
-            'fecha_ultimo_pago' => $datos['fecha_ultimo_pago_ahjr'],
-            'fecha_proximo_pago' => $datos['fecha_proximo_pago_ahjr'] ?? null,
-            'dias_restantes' => isset($datos['dias_restantes_ahjr']) ? (int) $datos['dias_restantes_ahjr'] : null,
-            'fecha_creacion' => $datos['fecha_creacion_ahjr']
+            'id' => (int) $datos_AHJR['id_suscripcion_ahjr'],
+            'nombre_servicio' => $datos_AHJR['nombre_servicio_ahjr'],
+            'costo' => (float) $datos_AHJR['costo_ahjr'],
+            'estado' => $datos_AHJR['estado_ahjr'],
+            'frecuencia' => $datos_AHJR['frecuencia_ahjr'],
+            'metodo_pago' => $datos_AHJR['metodo_pago_ahjr'],
+            'dia_cobro' => $datos_AHJR['dia_cobro_ahjr'] ? (int) $datos_AHJR['dia_cobro_ahjr'] : null,
+            'mes_cobro' => $datos_AHJR['mes_cobro_ahjr'] ? (int) $datos_AHJR['mes_cobro_ahjr'] : null,
+            'fecha_ultimo_pago' => $datos_AHJR['fecha_ultimo_pago_ahjr'],
+            'fecha_proximo_pago' => $datos_AHJR['fecha_proximo_pago_ahjr'] ?? null,
+            'dias_restantes' => isset($datos_AHJR['dias_restantes_ahjr']) ? (int) $datos_AHJR['dias_restantes_ahjr'] : null,
+            'fecha_creacion' => $datos_AHJR['fecha_creacion_ahjr']
         ];
     }
 }

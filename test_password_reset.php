@@ -22,7 +22,7 @@ $newPassword = 'newpassword456';
 echo "1. Creating Test User...\n";
 try {
     // Create user directly via model to skip OTP registration flow for this test
-    $usuarioModel->crear([
+    $usuarioModel->crear_AHJR([
         'nombre' => 'Test',
         'apellido' => 'Reset',
         'email' => $email,
@@ -55,7 +55,7 @@ if ($reset) {
     $knownOtp = '654321';
     $knownHash = password_hash($knownOtp, PASSWORD_BCRYPT);
 
-    $db = Database::getDB();
+    $db = Database::getDB_AHJR();
     $stmt = $db->prepare("UPDATE td_reset_clave_ahjr SET otp_hash_ahjr = :hash WHERE email_ahjr = :email");
     $stmt->execute(['hash' => $knownHash, 'email' => $email]);
 
@@ -65,7 +65,7 @@ if ($reset) {
         echo "Verification Result: " . print_r($result, true) . "\n";
 
         // Verify new password works (by checking hash change or login)
-        $usuario = $usuarioModel->buscarPorEmail($email);
+        $usuario = $usuarioModel->buscarPorEmail_AHJR($email);
         if (password_verify($newPassword, $usuario['clave_ahjr'])) {
             echo "SUCCESS: Password updated correctly.\n";
         } else {
@@ -79,8 +79,8 @@ if ($reset) {
 }
 
 // Clean up
-$usuario = $usuarioModel->buscarPorEmail($email);
+$usuario = $usuarioModel->buscarPorEmail_AHJR($email);
 if ($usuario) {
-    $usuarioModel->eliminar($usuario['id_ahjr']);
+    $usuarioModel->eliminar_AHJR($usuario['id_ahjr']);
     echo "Cleaned up user.\n";
 }

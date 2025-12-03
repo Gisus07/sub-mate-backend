@@ -15,97 +15,97 @@ use PDO;
  */
 class UsuarioModel
 {
-    private PDO $db;
+    private PDO $db_AHJR;
 
     public function __construct()
     {
-        $this->db = Database::getDB();
+        $this->db_AHJR = Database::getDB_AHJR();
     }
 
     /**
      * 1. Crea un nuevo usuario en td_usuarios_ahjr
      */
-    public function crear(array $datos): int
+    public function crear_AHJR(array $datos_AHJR): int
     {
-        $sql = "INSERT INTO td_usuarios_ahjr 
+        $sql_AHJR = "INSERT INTO td_usuarios_ahjr 
                 (nombre_ahjr, apellido_ahjr, email_ahjr, clave_ahjr, estado_ahjr, rol_ahjr)
                 VALUES (:nombre, :apellido, :email, :clave, :estado, :rol)";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($datos);
+        $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
+        $stmt_AHJR->execute($datos_AHJR);
 
-        return (int) $this->db->lastInsertId();
+        return (int) $this->db_AHJR->lastInsertId();
     }
 
     /**
      * 2. Busca usuario por email_ahjr
      */
-    public function buscarPorEmail(string $email): ?array
+    public function buscarPorEmail_AHJR(string $email_AHJR): ?array
     {
-        $sql = "SELECT * FROM td_usuarios_ahjr WHERE email_ahjr = :email LIMIT 1";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['email' => strtolower(trim($email))]);
+        $sql_AHJR = "SELECT * FROM td_usuarios_ahjr WHERE email_ahjr = :email LIMIT 1";
+        $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
+        $stmt_AHJR->execute(['email' => strtolower(trim($email_AHJR))]);
 
-        $result = $stmt->fetch();
-        return $result ?: null;
+        $result_AHJR = $stmt_AHJR->fetch();
+        return $result_AHJR ?: null;
     }
 
     /**
      * 3. Obtiene usuario por id_ahjr
      */
-    public function obtenerPorId(int $id): ?array
+    public function obtenerPorId_AHJR(int $id_AHJR): ?array
     {
-        $sql = "SELECT * FROM td_usuarios_ahjr WHERE id_ahjr = :id LIMIT 1";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['id' => $id]);
+        $sql_AHJR = "SELECT * FROM td_usuarios_ahjr WHERE id_ahjr = :id LIMIT 1";
+        $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
+        $stmt_AHJR->execute(['id' => $id_AHJR]);
 
-        $result = $stmt->fetch();
-        return $result ?: null;
+        $result_AHJR = $stmt_AHJR->fetch();
+        return $result_AHJR ?: null;
     }
 
     /**
      * 4. Actualiza datos del usuario
      */
-    public function actualizar(int $id, array $datos): bool
+    public function actualizar_AHJR(int $id_AHJR, array $datos_AHJR): bool
     {
-        $campos = [];
-        $params = ['id' => $id];
+        $campos_AHJR = [];
+        $params_AHJR = ['id' => $id_AHJR];
 
-        foreach ($datos as $clave => $valor) {
-            $campos[] = "{$clave} = :{$clave}";
-            $params[$clave] = $valor;
+        foreach ($datos_AHJR as $clave_AHJR => $valor_AHJR) {
+            $campos_AHJR[] = "{$clave_AHJR} = :{$clave_AHJR}";
+            $params_AHJR[$clave_AHJR] = $valor_AHJR;
         }
 
-        if (empty($campos)) {
+        if (empty($campos_AHJR)) {
             return false;
         }
 
-        $sql = "UPDATE td_usuarios_ahjr SET " . implode(', ', $campos) . " WHERE id_ahjr = :id";
-        $stmt = $this->db->prepare($sql);
+        $sql_AHJR = "UPDATE td_usuarios_ahjr SET " . implode(', ', $campos_AHJR) . " WHERE id_ahjr = :id";
+        $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
 
-        return $stmt->execute($params);
+        return $stmt_AHJR->execute($params_AHJR);
     }
 
     /**
      * 5. Elimina usuario por id_ahjr
      */
-    public function eliminar(int $id): bool
+    public function eliminar_AHJR(int $id_AHJR): bool
     {
-        $sql = "DELETE FROM td_usuarios_ahjr WHERE id_ahjr = :id";
-        $stmt = $this->db->prepare($sql);
+        $sql_AHJR = "DELETE FROM td_usuarios_ahjr WHERE id_ahjr = :id";
+        $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
 
-        return $stmt->execute(['id' => $id]);
+        return $stmt_AHJR->execute(['id' => $id_AHJR]);
     }
 
     /**
      * 6. Verifica si un email ya está registrado
      */
-    public function existeEmail(string $email): bool
+    public function existeEmail_AHJR(string $email_AHJR): bool
     {
-        $sql = "SELECT COUNT(*) FROM td_usuarios_ahjr WHERE email_ahjr = :email";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['email' => strtolower(trim($email))]);
+        $sql_AHJR = "SELECT COUNT(*) FROM td_usuarios_ahjr WHERE email_ahjr = :email";
+        $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
+        $stmt_AHJR->execute(['email' => strtolower(trim($email_AHJR))]);
 
-        return (int) $stmt->fetchColumn() > 0;
+        return (int) $stmt_AHJR->fetchColumn() > 0;
     }
 }

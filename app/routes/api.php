@@ -13,6 +13,7 @@ use App\controllers\SuscripcionController;
 use App\controllers\SuscripcionOperacionesController;
 use App\controllers\DashboardController;
 use App\controllers\HomeController;
+use App\controllers\ContactoController;
 use App\controllers\DebugController;
 use App\core\Response;
 
@@ -26,6 +27,7 @@ $suscripcionController = new SuscripcionController();
 $operacionesController = new SuscripcionOperacionesController();
 $dashboardController = new DashboardController();
 $homeController = new HomeController();
+$contactoController = new ContactoController();
 $debugController = new DebugController();
 
 // =============================================================================
@@ -50,6 +52,7 @@ $router_ahjr->add_ahjr('GET', '/', function () {
             ],
             "Usuario" => [
                 "PUT /api/perfil" => "Actualizar perfil del usuario autenticado",
+                "PATCH /api/perfil/password" => "Cambiar contraseña",
                 "DELETE /api/perfil" => "Eliminar cuenta del usuario autenticado"
             ],
             "Suscripciones" => [
@@ -75,67 +78,67 @@ $router_ahjr->add_ahjr('GET', '/', function () {
 
 // POST /api/auth/register - Registro de nuevo usuario
 $router_ahjr->add_ahjr('POST', '/api/auth/register', function () use ($authController) {
-    $authController->register();
+    $authController->register_ahjr();
 });
 
 // POST /api/auth/login - Inicio de sesión
 $router_ahjr->add_ahjr('POST', '/api/auth/login', function () use ($authController) {
-    $authController->login();
+    $authController->login_ahjr();
 });
 
 // Alias para compatibilidad con rutas antiguas
 $router_ahjr->add_ahjr('POST', '/auth/login', function () use ($authController) {
-    $authController->login();
+    $authController->login_ahjr();
 });
 
 // GET /api/auth/me - Obtener usuario autenticado
 $router_ahjr->add_ahjr('GET', '/api/auth/me', function () use ($authController) {
-    $authController->me();
+    $authController->me_ahjr();
 });
 
 // POST /api/auth/logout - Cerrar sesión
 $router_ahjr->add_ahjr('POST', '/api/auth/logout', function () use ($authController) {
-    $authController->logout();
+    $authController->logout_ahjr();
 });
 
 // POST /api/auth/register-verify - Verificar código OTP de registro
 $router_ahjr->add_ahjr('POST', '/api/auth/register-verify', function () use ($authController) {
-    $authController->verifyOTP();
+    $authController->verifyOTP_ahjr();
 });
 
 // POST /api/auth/password-reset - Solicitar reset de contraseña
 $router_ahjr->add_ahjr('POST', '/api/auth/password-reset', function () use ($authController) {
-    $authController->passwordReset();
+    $authController->passwordReset_ahjr();
 });
 
 // POST /api/auth/password-reset-verify - Verificar código y cambiar contraseña
 $router_ahjr->add_ahjr('POST', '/api/auth/password-reset-verify', function () use ($authController) {
-    $authController->passwordResetVerify();
+    $authController->passwordResetVerify_ahjr();
 });
 
 // POST /auth/password-reset - Solicitar reset de contraseña (legacy)
 $router_ahjr->add_ahjr('POST', '/auth/password-reset', function () use ($authController) {
-    $authController->passwordReset();
+    $authController->passwordReset_ahjr();
 });
 
 // POST /auth/password-reset-verify - Verificar código y cambiar contraseña (legacy)
 $router_ahjr->add_ahjr('POST', '/auth/password-reset-verify', function () use ($authController) {
-    $authController->passwordResetVerify();
+    $authController->passwordResetVerify_ahjr();
 });
 
 // GET /auth/session - Verificar sesión activa (legacy)
 $router_ahjr->add_ahjr('GET', '/auth/session', function () use ($authController) {
-    $authController->me();
+    $authController->me_ahjr();
 });
 
 // GET /api/auth/email-available - Validar disponibilidad de correo
 $router_ahjr->add_ahjr('GET', '/api/auth/email-available', function () use ($authController) {
-    $authController->checkEmailAvailability();
+    $authController->checkEmailAvailability_ahjr();
 });
 
 // GET /auth/email-available - Validar disponibilidad de correo (legacy)
 $router_ahjr->add_ahjr('GET', '/auth/email-available', function () use ($authController) {
-    $authController->checkEmailAvailability();
+    $authController->checkEmailAvailability_ahjr();
 });
 
 // =============================================================================
@@ -145,6 +148,11 @@ $router_ahjr->add_ahjr('GET', '/auth/email-available', function () use ($authCon
 // PUT /api/perfil - Actualizar perfil del usuario autenticado
 $router_ahjr->add_ahjr('PUT', '/api/perfil', function () use ($usuarioController) {
     $usuarioController->update();
+});
+
+// PATCH /api/perfil/password - Cambiar contraseña del usuario autenticado
+$router_ahjr->add_ahjr('PATCH', '/api/perfil/password', function () use ($usuarioController) {
+    $usuarioController->updatePassword();
 });
 
 // DELETE /api/perfil - Eliminar cuenta del usuario autenticado
@@ -207,6 +215,15 @@ $router_ahjr->add_ahjr('GET', '/api/dashboard', function () use ($dashboardContr
 // GET /api/home - Obtener datos para la vista principal
 $router_ahjr->add_ahjr('GET', '/api/home', function () use ($homeController) {
     $homeController->index();
+});
+
+// =============================================================================
+// CONTACTO MODULE - Formulario Público
+// =============================================================================
+
+// POST /api/contacto - Enviar mensaje de contacto
+$router_ahjr->add_ahjr('POST', '/api/contacto', function () use ($contactoController) {
+    $contactoController->enviar();
 });
 
 // =============================================================================

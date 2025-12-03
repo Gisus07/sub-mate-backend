@@ -18,16 +18,16 @@ use Firebase\JWT\Key;
  */
 class AuthService
 {
-    private UsuarioModel $model;
-    private UsuarioOTPModel $otpModel;
-    private string $jwtSecret;
-    private int $jwtExpiration = 86400; // 24 horas
+    private UsuarioModel $model_AHJR;
+    private UsuarioOTPModel $otpModel_AHJR;
+    private string $jwtSecret_AHJR;
+    private int $jwtExpiration_AHJR = 86400; // 24 horas
 
     public function __construct()
     {
-        $this->model = new UsuarioModel();
-        $this->otpModel = new UsuarioOTPModel();
-        $this->jwtSecret = $_ENV['JWT_SECRET'] ?? 'default_secret_change_me';
+        $this->model_AHJR = new UsuarioModel();
+        $this->otpModel_AHJR = new UsuarioOTPModel();
+        $this->jwtSecret_AHJR = $_ENV['JWT_SECRET'] ?? 'default_secret_change_me';
     }
 
     /**
@@ -35,32 +35,32 @@ class AuthService
      * Entrada: datos limpios { "nombre": "Juan", "email": "..." }
      * Salida: { "id": 1 }
      */
-    public function registrarUsuario(array $datosLimpios): array
+    public function registrarUsuario_AHJR(array $datosLimpios_AHJR): array
     {
         // 1. Validar si ya existe como usuario activo
-        if ($this->model->buscarPorEmail($datosLimpios['email'])) {
+        if ($this->model_AHJR->buscarPorEmail_AHJR($datosLimpios_AHJR['email'])) {
             throw new Exception('Este correo ya está registrado.', 409);
         }
 
         // 2. Generar OTP
-        $otp = (string) random_int(100000, 999999);
-        $otpHash = password_hash($otp, PASSWORD_BCRYPT);
-        $expira = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+        $otp_AHJR = (string) random_int(100000, 999999);
+        $otpHash_AHJR = password_hash($otp_AHJR, PASSWORD_BCRYPT);
+        $expira_AHJR = date('Y-m-d H:i:s', strtotime('+15 minutes'));
 
         // 3. Guardar en tabla temporal (Pendientes)
-        $datosPendientes = [
-            'nombre' => $datosLimpios['nombre'],
-            'apellido' => $datosLimpios['apellido'],
-            'email' => strtolower(trim($datosLimpios['email'])),
-            'clave' => password_hash($datosLimpios['clave'], PASSWORD_BCRYPT),
-            'otp_hash' => $otpHash,
-            'otp_expira' => $expira
+        $datosPendientes_AHJR = [
+            'nombre' => $datosLimpios_AHJR['nombre'],
+            'apellido' => $datosLimpios_AHJR['apellido'],
+            'email' => strtolower(trim($datosLimpios_AHJR['email'])),
+            'clave' => password_hash($datosLimpios_AHJR['clave'], PASSWORD_BCRYPT),
+            'otp_hash' => $otpHash_AHJR,
+            'otp_expira' => $expira_AHJR
         ];
 
-        $this->otpModel->crearRegistroPendiente($datosPendientes);
+        $this->otpModel_AHJR->crearRegistroPendiente($datosPendientes_AHJR);
 
         // 4. Enviar Email
-        \App\core\Mailer::sendOTP_ahjr($datosPendientes['email'], $otp);
+        \App\core\Mailer::sendOTP_ahjr($datosPendientes_AHJR['email'], $otp_AHJR);
 
         return ['message' => 'Código de verificación enviado al correo.'];
     }
@@ -68,84 +68,66 @@ class AuthService
     /**
      * 2. Verifica OTP y activa usuario
      */
-    public function verificarYActivar(string $email, string $otp): array
+    public function verificarYActivar_AHJR(string $email_AHJR, string $otp_AHJR): array
     {
-        $pendiente = $this->otpModel->obtenerPendientePorEmail($email);
+        $pendiente_AHJR = $this->otpModel_AHJR->obtenerPendientePorEmail($email_AHJR);
 
-        if (!$pendiente) {
+        if (!$pendiente_AHJR) {
             throw new Exception('No hay registro pendiente para este email.', 404);
         }
 
-        if (!password_verify($otp, $pendiente['otp_hash_ahjr'])) {
+        if (!password_verify($otp_AHJR, $pendiente_AHJR['otp_hash_ahjr'])) {
             throw new Exception('Código incorrecto.', 400);
         }
 
-        if (strtotime($pendiente['otp_expira_ahjr']) < time()) {
+        if (strtotime($pendiente_AHJR['otp_expira_ahjr']) < time()) {
             throw new Exception('El código ha expirado.', 400);
         }
 
         // Mover a usuarios activos
-        $datosUsuario = [
-            'nombre' => $pendiente['nombre_ahjr'],
-            'apellido' => $pendiente['apellido_ahjr'],
-            'email' => $pendiente['email_ahjr'],
-            'clave' => $pendiente['clave_ahjr'], // Ya está hasheada
+        $datosUsuario_AHJR = [
+            'nombre' => $pendiente_AHJR['nombre_ahjr'],
+            'apellido' => $pendiente_AHJR['apellido_ahjr'],
+            'email' => $pendiente_AHJR['email_ahjr'],
+            'clave' => $pendiente_AHJR['clave_ahjr'], // Ya está hasheada
             'estado' => 'activo',
             'rol' => 'user'
         ];
 
-        // Insertar en tabla real (usando método existente que espera clave sin hash, pero aquí pasamos hash)
-        // NOTA: UsuarioModel::crear espera clave plana para hashear? 
-        // Revisando UsuarioModel::crear... NO, UsuarioModel::crear NO hashea, inserta directo.
-        // AuthService::registrarUsuario original hasheaba ANTES de llamar a model->crear.
-        // Entonces aquí pasamos la clave YA hasheada.
-
-        // CORRECCIÓN: UsuarioModel::crear inserta lo que recibe. 
-        // Pero AuthService::registrarUsuario original hacía: 'clave' => password_hash(...)
-        // Mi nuevo registrarUsuario hace hash al guardar en pendiente.
-        // Así que $pendiente['clave_ahjr'] YA es un hash.
-        // Al llamar a $this->model->crear($datosUsuario), se insertará el hash.
-
-        $id = $this->model->crear($datosUsuario);
+        $id_AHJR = $this->model_AHJR->crear_AHJR($datosUsuario_AHJR);
 
         // Eliminar pendiente
-        $this->otpModel->eliminarPendiente($pendiente['id_pendiente_ahjr']);
+        $this->otpModel_AHJR->eliminarPendiente($pendiente_AHJR['id_pendiente_ahjr']);
 
-        return ['id' => $id, 'message' => 'Cuenta verificada y creada exitosamente.'];
+        return ['id' => $id_AHJR, 'message' => 'Cuenta verificada y creada exitosamente.'];
     }
 
     /**
      * 3. Solicitar Reset de Contraseña
      */
-    public function solicitarResetPassword(string $email): array
+    public function solicitarResetPassword_AHJR(string $email_AHJR): array
     {
         // Verificar si el usuario existe
-        if (!$this->model->buscarPorEmail($email)) {
-            // Por seguridad, no revelamos si el email existe o no, pero enviamos éxito simulado
-            // Opcional: throw new Exception('Email no registrado', 404); si la política lo permite.
-            // El usuario pidió "Solicitar reset", asumiremos que quiere saber si se envió.
-            // Pero para evitar enumeración, retornamos éxito genérico.
-            // Sin embargo, si no existe, no podemos enviar email real.
-            // Retornaremos éxito siempre.
+        if (!$this->model_AHJR->buscarPorEmail_AHJR($email_AHJR)) {
+            // Por seguridad, retornamos éxito genérico
             return ['message' => 'Si el correo existe, se ha enviado un código de recuperación.'];
         }
 
         // Generar OTP
-        $otp = (string) random_int(100000, 999999);
-        $otpHash = password_hash($otp, PASSWORD_BCRYPT);
-        $expira = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+        $otp_AHJR = (string) random_int(100000, 999999);
+        $otpHash_AHJR = password_hash($otp_AHJR, PASSWORD_BCRYPT);
+        $expira_AHJR = date('Y-m-d H:i:s', strtotime('+15 minutes'));
 
-        $datosReset = [
-            'email' => strtolower(trim($email)),
-            'otp_hash' => $otpHash,
-            'otp_expira' => $expira
+        $datosReset_AHJR = [
+            'email' => strtolower(trim($email_AHJR)),
+            'otp_hash' => $otpHash_AHJR,
+            'otp_expira' => $expira_AHJR
         ];
 
-        $this->otpModel->crearResetPendiente($datosReset);
+        $this->otpModel_AHJR->crearResetPendiente($datosReset_AHJR);
 
         // Enviar Email
-        \App\core\Mailer::sendOTP_ahjr($email, $otp); // Reusamos sendOTP o creamos uno específico?
-        // El usuario dijo "siguiendo el mismo patrón de OTP". sendOTP sirve.
+        \App\core\Mailer::sendOTP_ahjr($email_AHJR, $otp_AHJR);
 
         return ['message' => 'Si el correo existe, se ha enviado un código de recuperación.'];
     }
@@ -153,34 +135,34 @@ class AuthService
     /**
      * 4. Verificar Reset y Cambiar Contraseña
      */
-    public function verificarResetPassword(string $email, string $otp, string $nuevaClave): array
+    public function verificarResetPassword_AHJR(string $email_AHJR, string $otp_AHJR, string $nuevaClave_AHJR): array
     {
-        $reset = $this->otpModel->obtenerResetPorEmail($email);
+        $reset_AHJR = $this->otpModel_AHJR->obtenerResetPorEmail($email_AHJR);
 
-        if (!$reset) {
+        if (!$reset_AHJR) {
             throw new Exception('Solicitud no encontrada o expirada.', 404);
         }
 
-        if (!password_verify($otp, $reset['otp_hash_ahjr'])) {
+        if (!password_verify($otp_AHJR, $reset_AHJR['otp_hash_ahjr'])) {
             throw new Exception('Código incorrecto.', 400);
         }
 
-        if (strtotime($reset['otp_expira_ahjr']) < time()) {
+        if (strtotime($reset_AHJR['otp_expira_ahjr']) < time()) {
             throw new Exception('El código ha expirado.', 400);
         }
 
         // Buscar usuario para obtener ID
-        $usuario = $this->model->buscarPorEmail($email);
-        if (!$usuario) {
+        $usuario_AHJR = $this->model_AHJR->buscarPorEmail_AHJR($email_AHJR);
+        if (!$usuario_AHJR) {
             throw new Exception('Usuario no encontrado.', 404);
         }
 
         // Actualizar contraseña
-        $nuevaClaveHash = password_hash($nuevaClave, PASSWORD_BCRYPT);
-        $this->model->actualizar($usuario['id_ahjr'], ['clave_ahjr' => $nuevaClaveHash]);
+        $nuevaClaveHash_AHJR = password_hash($nuevaClave_AHJR, PASSWORD_BCRYPT);
+        $this->model_AHJR->actualizar_AHJR($usuario_AHJR['id_ahjr'], ['clave_ahjr' => $nuevaClaveHash_AHJR]);
 
         // Eliminar solicitud de reset
-        $this->otpModel->eliminarReset($reset['id_reset_ahjr']);
+        $this->otpModel_AHJR->eliminarReset($reset_AHJR['id_reset_ahjr']);
 
         return ['message' => 'Contraseña actualizada correctamente.'];
     }
@@ -190,49 +172,49 @@ class AuthService
      * CRÍTICO: Devuelve array limpio con campo 'rol'
      * Salida: { "usuario": {..., "rol": "beta"}, "token": "..." }
      */
-    public function login(string $email, string $clave): array
+    public function login_AHJR(string $email_AHJR, string $clave_AHJR): array
     {
         // Buscar usuario
-        $usuario = $this->model->buscarPorEmail($email);
+        $usuario_AHJR = $this->model_AHJR->buscarPorEmail_AHJR($email_AHJR);
 
-        if (!$usuario) {
+        if (!$usuario_AHJR) {
             throw new Exception('Credenciales incorrectas.', 401);
         }
 
         // Verificar contraseña
-        if (!password_verify($clave, $usuario['clave_ahjr'])) {
+        if (!password_verify($clave_AHJR, $usuario_AHJR['clave_ahjr'])) {
             throw new Exception('Credenciales incorrectas.', 401);
         }
 
         // Verificar estado
-        if ($usuario['estado_ahjr'] !== 'activo') {
+        if ($usuario_AHJR['estado_ahjr'] !== 'activo') {
             throw new Exception('Usuario inactivo.', 403);
         }
 
         // Limpiar sufijos _ahjr
-        $usuarioLimpio = $this->limpiarSufijos($usuario);
+        $usuarioLimpio_AHJR = $this->limpiarSufijos_AHJR($usuario_AHJR);
 
         // Generar JWT
-        $token = $this->generarJWT($usuarioLimpio);
+        $token_AHJR = $this->generarJWT_AHJR($usuarioLimpio_AHJR);
 
         // Configurar Cookie Segura (Dual Auth)
-        $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+        $secure_AHJR = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
         setcookie(
             'sm_session',
-            $token,
+            $token_AHJR,
             [
-                'expires' => time() + $this->jwtExpiration,
+                'expires' => time() + $this->jwtExpiration_AHJR,
                 'path' => '/',
                 'domain' => '', // Current domain
-                'secure' => $secure,
+                'secure' => $secure_AHJR,
                 'httponly' => true,
                 'samesite' => 'Lax'
             ]
         );
 
         return [
-            'usuario' => $usuarioLimpio,
-            'token' => $token
+            'usuario' => $usuarioLimpio_AHJR,
+            'token' => $token_AHJR
         ];
     }
 
@@ -240,11 +222,11 @@ class AuthService
      * 3. Valida token JWT
      * Salida: payload del token
      */
-    public function validarToken(string $token): array
+    public function validarToken_AHJR(string $token_AHJR): array
     {
         try {
-            $decoded = JWT::decode($token, new Key($this->jwtSecret, 'HS256'));
-            return (array) $decoded;
+            $decoded_AHJR = JWT::decode($token_AHJR, new Key($this->jwtSecret_AHJR, 'HS256'));
+            return (array) $decoded_AHJR;
         } catch (\Firebase\JWT\ExpiredException $e) {
             throw new Exception('Token expirado.', 401);
         } catch (\Exception $e) {
@@ -257,33 +239,33 @@ class AuthService
     /**
      * Genera JWT con información del usuario
      */
-    private function generarJWT(array $usuario): string
+    private function generarJWT_AHJR(array $usuario_AHJR): string
     {
-        $payload = [
+        $payload_AHJR = [
             'iss' => 'SubMate',
-            'sub' => $usuario['id'],
+            'sub' => $usuario_AHJR['id'],
             'iat' => time(),
-            'exp' => time() + $this->jwtExpiration,
-            'email' => $usuario['email'],
-            'rol' => $usuario['rol']  // CRÍTICO: rol incluido
+            'exp' => time() + $this->jwtExpiration_AHJR,
+            'email' => $usuario_AHJR['email'],
+            'rol' => $usuario_AHJR['rol']  // CRÍTICO: rol incluido
         ];
 
-        return JWT::encode($payload, $this->jwtSecret, 'HS256');
+        return JWT::encode($payload_AHJR, $this->jwtSecret_AHJR, 'HS256');
     }
 
     /**
      * Limpia sufijos _ahjr del array de BD
      */
-    private function limpiarSufijos(array $datos): array
+    private function limpiarSufijos_AHJR(array $datos_AHJR): array
     {
         return [
-            'id' => (int) $datos['id_ahjr'],
-            'nombre' => $datos['nombre_ahjr'],
-            'apellido' => $datos['apellido_ahjr'],
-            'email' => $datos['email_ahjr'],
-            'fecha_registro' => $datos['fecha_registro_ahjr'],
-            'estado' => $datos['estado_ahjr'],
-            'rol' => $datos['rol_ahjr']  // CRÍTICO: rol incluido
+            'id' => (int) $datos_AHJR['id_ahjr'],
+            'nombre' => $datos_AHJR['nombre_ahjr'],
+            'apellido' => $datos_AHJR['apellido_ahjr'],
+            'email' => $datos_AHJR['email_ahjr'],
+            'fecha_registro' => $datos_AHJR['fecha_registro_ahjr'],
+            'estado' => $datos_AHJR['estado_ahjr'],
+            'rol' => $datos_AHJR['rol_ahjr']  // CRÍTICO: rol incluido
         ];
     }
 }

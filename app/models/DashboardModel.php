@@ -15,11 +15,11 @@ use PDO;
  */
 class DashboardModel
 {
-    private PDO $db;
+    private PDO $db_AHJR;
 
     public function __construct()
     {
-        $this->db = Database::getDB();
+        $this->db_AHJR = Database::getDB_AHJR();
     }
 
     /**
@@ -28,17 +28,17 @@ class DashboardModel
      * - Mes pasado: Solo suma historial real
      * - Mes actual: Historial + proyección de suscripciones activas
      */
-    public function obtenerGastoTotalMes(int $uid, int $mes, int $anio): float
+    public function obtenerGastoTotalMes_AHJR(int $uid_AHJR, int $mes_AHJR, int $anio_AHJR): float
     {
-        $mesActual = (int) date('n');
-        $anioActual =  (int) date('Y');
+        $mesActual_AHJR = (int) date('n');
+        $anioActual_AHJR =  (int) date('Y');
 
         // Determinar si es mes pasado o actual
-        $esMesPasado = ($anio < $anioActual) || ($anio === $anioActual && $mes < $mesActual);
+        $esMesPasado_AHJR = ($anio_AHJR < $anioActual_AHJR) || ($anio_AHJR === $anioActual_AHJR && $mes_AHJR < $mesActual_AHJR);
 
-        if ($esMesPasado) {
+        if ($esMesPasado_AHJR) {
             // CASO 1: Mes pasado - Solo historial
-            $sql = "SELECT COALESCE(SUM(h.monto_pagado_ahjr), 0) as total
+            $sql_AHJR = "SELECT COALESCE(SUM(h.monto_pagado_ahjr), 0) as total
                     FROM td_historial_pagos_ahjr h
                     INNER JOIN td_suscripciones_ahjr s 
                         ON h.id_suscripcion_historial_ahjr = s.id_suscripcion_ahjr
@@ -46,12 +46,12 @@ class DashboardModel
                     AND MONTH(h.fecha_pago_ahjr) = :mes
                     AND YEAR(h.fecha_pago_ahjr) = :anio";
 
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute(['uid' => $uid, 'mes' => $mes, 'anio' => $anio]);
+            $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
+            $stmt_AHJR->execute(['uid' => $uid_AHJR, 'mes' => $mes_AHJR, 'anio' => $anio_AHJR]);
         } else {
             // CASO 2: Mes actual - Historial + Proyección de activas
             // Usar parámetros posicionales para evitar duplicados
-            $sql = "SELECT 
+            $sql_AHJR = "SELECT 
                         (SELECT COALESCE(SUM(h.monto_pagado_ahjr), 0)
                          FROM td_historial_pagos_ahjr h
                          INNER JOIN td_suscripciones_ahjr s 
@@ -67,20 +67,20 @@ class DashboardModel
                          AND frecuencia_ahjr = 'mensual')
                     as total";
 
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([$uid, $mes, $anio, $uid]);
+            $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
+            $stmt_AHJR->execute([$uid_AHJR, $mes_AHJR, $anio_AHJR, $uid_AHJR]);
         }
 
-        $result = $stmt->fetch();
-        return (float) $result['total'];
+        $result_AHJR = $stmt_AHJR->fetch();
+        return (float) $result_AHJR['total'];
     }
 
     /**
      * 2. Obtiene gasto agrupado por categoría (frecuencia)
      */
-    public function obtenerGastoPorCategoria(int $uid): array
+    public function obtenerGastoPorCategoria_AHJR(int $uid_AHJR): array
     {
-        $sql = "SELECT 
+        $sql_AHJR = "SELECT 
                     frecuencia_ahjr,
                     SUM(costo_ahjr) as total
                 FROM td_suscripciones_ahjr
@@ -88,16 +88,16 @@ class DashboardModel
                 AND estado_ahjr = 'activa'
                 GROUP BY frecuencia_ahjr";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['uid' => $uid]);
+        $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
+        $stmt_AHJR->execute(['uid' => $uid_AHJR]);
 
-        $resultado = ['mensual' => 0.0, 'anual' => 0.0];
+        $resultado_AHJR = ['mensual' => 0.0, 'anual' => 0.0];
 
-        while ($row = $stmt->fetch()) {
-            $resultado[$row['frecuencia_ahjr']] = (float) $row['total'];
+        while ($row_AHJR = $stmt_AHJR->fetch()) {
+            $resultado_AHJR[$row_AHJR['frecuencia_ahjr']] = (float) $row_AHJR['total'];
         }
 
-        return $resultado;
+        return $resultado_AHJR;
     }
 
     /**
@@ -107,13 +107,13 @@ class DashboardModel
      * - Meses pasados: Suma de historial real.
      * - Mes actual: Suma de historial (pagado) + Proyección (por pagar).
      */
-    public function obtenerHistorialAnual(int $uid): array
+    public function obtenerHistorialAnual_AHJR(int $uid_AHJR): array
     {
-        $anioActual = (int) date('Y');
-        $mesActual = (int) date('n');
+        $anioActual_AHJR = (int) date('Y');
+        $mesActual_AHJR = (int) date('n');
 
         // 1. Obtener historial real de todo el año (Ene - Actual)
-        $sqlHistorial = "SELECT 
+        $sqlHistorial_AHJR = "SELECT 
                             DATE_FORMAT(h.fecha_pago_ahjr, '%Y-%m') as mes,
                             SUM(h.monto_pagado_ahjr) as total
                         FROM td_historial_pagos_ahjr h
@@ -123,59 +123,59 @@ class DashboardModel
                         AND YEAR(h.fecha_pago_ahjr) = :anio
                         GROUP BY DATE_FORMAT(h.fecha_pago_ahjr, '%Y-%m')";
 
-        $stmt = $this->db->prepare($sqlHistorial);
-        $stmt->execute(['uid' => $uid, 'anio' => $anioActual]);
+        $stmt_AHJR = $this->db_AHJR->prepare($sqlHistorial_AHJR);
+        $stmt_AHJR->execute(['uid' => $uid_AHJR, 'anio' => $anioActual_AHJR]);
 
-        $historial = $stmt->fetchAll(PDO::FETCH_KEY_PAIR); // ['2024-01' => 100, ...]
+        $historial_AHJR = $stmt_AHJR->fetchAll(PDO::FETCH_KEY_PAIR); // ['2024-01' => 100, ...]
 
         // 2. Calcular proyección "Por Pagar" del mes actual
         // Suscripciones activas cuya fecha de próximo pago cae en este mes y año
-        $sqlProyeccion = "SELECT COALESCE(SUM(costo_ahjr), 0) as total
+        $sqlProyeccion_AHJR = "SELECT COALESCE(SUM(costo_ahjr), 0) as total
                           FROM td_suscripciones_ahjr
                           WHERE id_usuario_suscripcion_ahjr = :uid
                           AND estado_ahjr = 'activa'
                           AND MONTH(fecha_proximo_pago_ahjr) = :mes
                           AND YEAR(fecha_proximo_pago_ahjr) = :anio";
 
-        $stmtProj = $this->db->prepare($sqlProyeccion);
-        $stmtProj->execute(['uid' => $uid, 'mes' => $mesActual, 'anio' => $anioActual]);
-        $porPagar = (float) $stmtProj->fetch()['total'];
+        $stmtProj_AHJR = $this->db_AHJR->prepare($sqlProyeccion_AHJR);
+        $stmtProj_AHJR->execute(['uid' => $uid_AHJR, 'mes' => $mesActual_AHJR, 'anio' => $anioActual_AHJR]);
+        $porPagar_AHJR = (float) $stmtProj_AHJR->fetch()['total'];
 
         // 3. Sumar proyección al mes actual en el historial
-        $mesActualKey = date('Y-m');
-        if (!isset($historial[$mesActualKey])) {
-            $historial[$mesActualKey] = 0;
+        $mesActualKey_AHJR = date('Y-m');
+        if (!isset($historial_AHJR[$mesActualKey_AHJR])) {
+            $historial_AHJR[$mesActualKey_AHJR] = 0;
         }
-        $historial[$mesActualKey] += $porPagar;
+        $historial_AHJR[$mesActualKey_AHJR] += $porPagar_AHJR;
 
-        return $historial;
+        return $historial_AHJR;
     }
 
     /**
      * 4. Cuenta suscripciones activas
      */
-    public function contarActivas(int $uid): int
+    public function contarActivas_AHJR(int $uid_AHJR): int
     {
-        $sql = "SELECT COUNT(*) as total
+        $sql_AHJR = "SELECT COUNT(*) as total
                 FROM td_suscripciones_ahjr
                 WHERE id_usuario_suscripcion_ahjr = :uid
                 AND estado_ahjr = 'activa'";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['uid' => $uid]);
+        $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
+        $stmt_AHJR->execute(['uid' => $uid_AHJR]);
 
-        $result = $stmt->fetch();
-        return (int) $result['total'];
+        $result_AHJR = $stmt_AHJR->fetch();
+        return (int) $result_AHJR['total'];
     }
 
     /**
      * 5. Obtiene próximo vencimiento (día de cobro más cercano)
      */
-    public function obtenerProximoVencimiento(int $uid): ?array
+    public function obtenerProximoVencimiento_AHJR(int $uid_AHJR): ?array
     {
-        $diaActual = (int) date('j');
+        $diaActual_AHJR = (int) date('j');
 
-        $sql = "SELECT 
+        $sql_AHJR = "SELECT 
                     id_suscripcion_ahjr,
                     nombre_servicio_ahjr,
                     costo_ahjr,
@@ -193,20 +193,20 @@ class DashboardModel
                     END ASC
                 LIMIT 1";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$uid, $diaActual, $diaActual, $diaActual]);
+        $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
+        $stmt_AHJR->execute([$uid_AHJR, $diaActual_AHJR, $diaActual_AHJR, $diaActual_AHJR]);
 
-        $result = $stmt->fetch();
-        return $result ?: null;
+        $result_AHJR = $stmt_AHJR->fetch();
+        return $result_AHJR ?: null;
     }
 
     /**
      * MÉTODO ADICIONAL para prepararDistribucionMetodos (usado por DashboardService)
      * Obtiene distribución de gastos por método de pago desde suscripciones activas
      */
-    public function obtenerDistribucionPorMetodo(int $uid): array
+    public function obtenerDistribucionPorMetodo_AHJR(int $uid_AHJR): array
     {
-        $sql = "SELECT 
+        $sql_AHJR = "SELECT 
                     metodo_pago_ahjr, 
                     SUM(costo_ahjr) as total
                 FROM td_suscripciones_ahjr
@@ -215,49 +215,49 @@ class DashboardModel
                 GROUP BY metodo_pago_ahjr
                 ORDER BY total DESC";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['uid' => $uid]);
+        $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
+        $stmt_AHJR->execute(['uid' => $uid_AHJR]);
 
-        return $stmt->fetchAll();
+        return $stmt_AHJR->fetchAll();
     }
 
     /**
      * NUEVO: Obtiene gasto mensual estimado
      * Suma de costos mensuales + (costos anuales / 12)
      */
-    public function obtenerGastoMensualEstimado(int $uid): float
+    public function obtenerGastoMensualEstimado_AHJR(int $uid_AHJR): float
     {
         // 1. Sumar mensuales
-        $sqlMensual = "SELECT COALESCE(SUM(costo_ahjr), 0) as total
+        $sqlMensual_AHJR = "SELECT COALESCE(SUM(costo_ahjr), 0) as total
                        FROM td_suscripciones_ahjr
                        WHERE id_usuario_suscripcion_ahjr = :uid
                        AND estado_ahjr = 'activa'
                        AND frecuencia_ahjr = 'mensual'";
 
-        $stmtMensual = $this->db->prepare($sqlMensual);
-        $stmtMensual->execute(['uid' => $uid]);
-        $totalMensual = (float) $stmtMensual->fetch()['total'];
+        $stmtMensual_AHJR = $this->db_AHJR->prepare($sqlMensual_AHJR);
+        $stmtMensual_AHJR->execute(['uid' => $uid_AHJR]);
+        $totalMensual_AHJR = (float) $stmtMensual_AHJR->fetch()['total'];
 
         // 2. Sumar anuales y dividir por 12
-        $sqlAnual = "SELECT COALESCE(SUM(costo_ahjr), 0) as total
+        $sqlAnual_AHJR = "SELECT COALESCE(SUM(costo_ahjr), 0) as total
                      FROM td_suscripciones_ahjr
                      WHERE id_usuario_suscripcion_ahjr = :uid
                      AND estado_ahjr = 'activa'
                      AND frecuencia_ahjr = 'anual'";
 
-        $stmtAnual = $this->db->prepare($sqlAnual);
-        $stmtAnual->execute(['uid' => $uid]);
-        $totalAnual = (float) $stmtAnual->fetch()['total'];
+        $stmtAnual_AHJR = $this->db_AHJR->prepare($sqlAnual_AHJR);
+        $stmtAnual_AHJR->execute(['uid' => $uid_AHJR]);
+        $totalAnual_AHJR = (float) $stmtAnual_AHJR->fetch()['total'];
 
-        return $totalMensual + ($totalAnual / 12);
+        return $totalMensual_AHJR + ($totalAnual_AHJR / 12);
     }
 
     /**
      * NUEVO: Obtiene distribución por frecuencia (para Donut Chart)
      */
-    public function obtenerDistribucionFrecuencia(int $uid): array
+    public function obtenerDistribucionFrecuencia_AHJR(int $uid_AHJR): array
     {
-        $sql = "SELECT 
+        $sql_AHJR = "SELECT 
                     frecuencia_ahjr,
                     COUNT(*) as total
                 FROM td_suscripciones_ahjr
@@ -265,17 +265,17 @@ class DashboardModel
                 AND estado_ahjr = 'activa'
                 GROUP BY frecuencia_ahjr";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['uid' => $uid]);
+        $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
+        $stmt_AHJR->execute(['uid' => $uid_AHJR]);
 
-        return $stmt->fetchAll(PDO::FETCH_KEY_PAIR); // Retorna ['mensual' => 5, 'anual' => 1]
+        return $stmt_AHJR->fetchAll(PDO::FETCH_KEY_PAIR); // Retorna ['mensual' => 5, 'anual' => 1]
     }
     /**
      * NUEVO: Obtiene las N suscripciones más costosas
      */
-    public function obtenerTopSuscripciones(int $uid, int $limit): array
+    public function obtenerTopSuscripciones_AHJR(int $uid_AHJR, int $limit_AHJR): array
     {
-        $sql = "SELECT 
+        $sql_AHJR = "SELECT 
                     nombre_servicio_ahjr as nombre,
                     costo_ahjr as costo
                 FROM td_suscripciones_ahjr
@@ -284,12 +284,12 @@ class DashboardModel
                 ORDER BY costo_ahjr DESC
                 LIMIT :limit";
 
-        $stmt = $this->db->prepare($sql);
+        $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
         // Bind manual para LIMIT (PDO a veces da problemas con strings en LIMIT)
-        $stmt->bindValue(':uid', $uid, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->execute();
+        $stmt_AHJR->bindValue(':uid', $uid_AHJR, PDO::PARAM_INT);
+        $stmt_AHJR->bindValue(':limit', $limit_AHJR, PDO::PARAM_INT);
+        $stmt_AHJR->execute();
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $stmt_AHJR->fetchAll(PDO::FETCH_ASSOC);
     }
 }

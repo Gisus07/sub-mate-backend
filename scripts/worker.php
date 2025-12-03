@@ -20,7 +20,7 @@ $dotenv->load();
 echo "=== SubMate Worker: " . date('Y-m-d H:i:s') . " ===\n";
 
 try {
-    $db = Database::getDB();
+    $db = Database::getDB_AHJR();
     $alerts = new AlertsService();
 
     // ==================================================================
@@ -121,7 +121,7 @@ try {
             // Determinar acción según tipo
             if (strpos($item['tipo_alerta_ahjr'], 'RECORDATORIO') !== false) {
                 // Extraer días del tipo si es necesario, o usar dias_restantes
-                $enviado = $alerts->enviarRecordatorio($item, $dias);
+                $enviado = $alerts->enviarRecordatorio_AHJR($item, $dias);
             }
 
             if ($enviado) {

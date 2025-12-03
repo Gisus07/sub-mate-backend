@@ -47,14 +47,14 @@ class DebugController
         $title = "🔧 Email de Prueba - SubMate";
         $message = "Este es un correo de prueba para verificar la configuración SMTP de SubMate. Si recibes este mensaje, significa que la configuración está funcionando correctamente.";
 
-        $html = Mailer::generarTemplateHTML($title, $message);
+        $html = Mailer::generarTemplateHTML_AHJR($title, $message);
 
         // Log del intento
         error_log("DebugController::testEmail - Intentando enviar correo de prueba a: {$email}");
 
         // Intentar enviar
         try {
-            $resultado = Mailer::sendEmail($email, "Prueba SMTP - SubMate", $html);
+            $resultado = Mailer::sendEmail_AHJR($email, "Prueba SMTP - SubMate", $html);
 
             if ($resultado) {
                 error_log("DebugController::testEmail - Correo enviado exitosamente a: {$email}");

@@ -18,7 +18,7 @@ class UsuarioOTPModel
 
     public function __construct()
     {
-        $this->db = Database::getDB();
+        $this->db = Database::getDB_AHJR();
     }
 
     /**

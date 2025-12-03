@@ -189,6 +189,22 @@ try {
     echo "✓ Tabla 'td_email_pendientes_ahjr' creada\n\n";
 
     // ================================================================
+    // TABLA 7: td_contacto_ahjr (FORMULARIO DE CONTACTO)
+    // ================================================================
+    echo "► Creando tabla 'td_contacto_ahjr'...\n";
+    $pdo_ahjr->exec("CREATE TABLE IF NOT EXISTS `td_contacto_ahjr` (
+        `id_contacto_ahjr` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        `nombre_completo_ahjr` VARCHAR(100) NOT NULL,
+        `email_ahjr` VARCHAR(120) NOT NULL,
+        `telefono_ahjr` VARCHAR(20) NULL,
+        `asunto_ahjr` ENUM('consulta', 'propuesta', 'soporte') NOT NULL,
+        `mensaje_ahjr` TEXT NOT NULL,
+        `fecha_envio_ahjr` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (`id_contacto_ahjr`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    echo "✓ Tabla 'td_contacto_ahjr' creada\n\n";
+
+    // ================================================================
     // TRIGGER: tr_actualizar_fecha_ahjr (RECUPERADO)
     // ================================================================
     echo "► Creando trigger 'tr_actualizar_fecha_ahjr'...\n";

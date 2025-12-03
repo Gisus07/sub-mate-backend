@@ -16,13 +16,13 @@ use Exception;
  */
 class SuscripcionController
 {
-    private SuscripcionService $service;
-    private AuthMiddleware $middleware;
+    private SuscripcionService $service_AHJR;
+    private AuthMiddleware $middleware_AHJR;
 
     public function __construct()
     {
-        $this->service = new SuscripcionService();
-        $this->middleware = new AuthMiddleware();
+        $this->service_AHJR = new SuscripcionService();
+        $this->middleware_AHJR = new AuthMiddleware();
     }
 
     /**
@@ -32,15 +32,15 @@ class SuscripcionController
     {
         try {
             // Autenticar usuario
-            $usuario = $this->middleware->handle();
+            $usuario_AHJR = $this->middleware_AHJR->handle_AHJR();
 
             // Usar el ID del usuario autenticado
-            $suscripciones = $this->service->obtenerLista($usuario['sub']);
+            $suscripciones_AHJR = $this->service_AHJR->obtenerLista_AHJR($usuario_AHJR['sub']);
 
-            Response::ok_ahjr(['suscripciones' => $suscripciones]);
+            Response::ok_ahjr(['suscripciones' => $suscripciones_AHJR]);
         } catch (Exception $e) {
-            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-            Response::json_ahjr(['message' => $e->getMessage()], $status);
+            $status_AHJR = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status_AHJR);
         }
     }
 
@@ -50,77 +50,77 @@ class SuscripcionController
     public function store(): void
     {
         try {
-            $usuario = $this->middleware->handle();
-            $input = $this->leerJSON();
+            $usuario_AHJR = $this->middleware_AHJR->handle_AHJR();
+            $input_AHJR = $this->leerJSON_AHJR();
 
-            $resultado = $this->service->crear($input, $usuario['sub']);
+            $resultado_AHJR = $this->service_AHJR->crear_AHJR($input_AHJR, $usuario_AHJR['sub']);
 
             Response::json_ahjr([
                 'message' => 'Suscripción creada exitosamente.',
-                'id' => $resultado['id']
+                'id' => $resultado_AHJR['id']
             ], 201);
         } catch (Exception $e) {
-            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-            Response::json_ahjr(['message' => $e->getMessage()], $status);
+            $status_AHJR = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status_AHJR);
         }
     }
 
     /**
      * 3. GET /api/suscripciones/{id} - Obtiene detalle
      */
-    public function show(int $id): void
+    public function show(int $id_AHJR): void
     {
         try {
-            $usuario = $this->middleware->handle();
-            $suscripcion = $this->service->obtenerDetalle($id, $usuario['sub']);
+            $usuario_AHJR = $this->middleware_AHJR->handle_AHJR();
+            $suscripcion_AHJR = $this->service_AHJR->obtenerDetalle_AHJR($id_AHJR, $usuario_AHJR['sub']);
 
-            Response::ok_ahjr(['suscripcion' => $suscripcion]);
+            Response::ok_ahjr(['suscripcion' => $suscripcion_AHJR]);
         } catch (Exception $e) {
-            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-            Response::json_ahjr(['message' => $e->getMessage()], $status);
+            $status_AHJR = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status_AHJR);
         }
     }
 
     /**
      * 4. PUT /api/suscripciones/{id} - Actualiza
      */
-    public function update(int $id): void
+    public function update(int $id_AHJR): void
     {
         try {
-            $usuario = $this->middleware->handle();
-            $input = $this->leerJSON();
+            $usuario_AHJR = $this->middleware_AHJR->handle_AHJR();
+            $input_AHJR = $this->leerJSON_AHJR();
 
-            $this->service->modificar($id, $input, $usuario['sub']);
+            $this->service_AHJR->modificar_AHJR($id_AHJR, $input_AHJR, $usuario_AHJR['sub']);
 
             Response::ok_ahjr(['message' => 'Suscripción actualizada correctamente.']);
         } catch (Exception $e) {
-            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-            Response::json_ahjr(['message' => $e->getMessage()], $status);
+            $status_AHJR = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status_AHJR);
         }
     }
 
     /**
      * 5. DELETE /api/suscripciones/{id} - Elimina
      */
-    public function destroy(int $id): void
+    public function destroy(int $id_AHJR): void
     {
         try {
-            $usuario = $this->middleware->handle();
+            $usuario_AHJR = $this->middleware_AHJR->handle_AHJR();
 
-            $this->service->borrar($id, $usuario['sub']);
+            $this->service_AHJR->borrar_AHJR($id_AHJR, $usuario_AHJR['sub']);
 
             Response::ok_ahjr(['message' => 'Suscripción eliminada correctamente.']);
         } catch (Exception $e) {
-            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-            Response::json_ahjr(['message' => $e->getMessage()], $status);
+            $status_AHJR = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status_AHJR);
         }
     }
 
     // ===== HELPERS PRIVADOS =====
 
-    private function leerJSON(): array
+    private function leerJSON_AHJR(): array
     {
-        $json = file_get_contents('php://input');
-        return json_decode($json, true) ?? [];
+        $json_AHJR = file_get_contents('php://input');
+        return json_decode($json_AHJR, true) ?? [];
     }
 }

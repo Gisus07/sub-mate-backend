@@ -15,49 +15,49 @@ use Exception;
  */
 class AuthMiddleware
 {
-    private AuthService $authService;
+    private AuthService $authService_AHJR;
 
     public function __construct()
     {
-        $this->authService = new AuthService();
+        $this->authService_AHJR = new AuthService();
     }
 
     /**
      * 1. Maneja la autenticación de la petición
      * Retorna el payload del usuario autenticado
      */
-    public function handle(): array
+    public function handle_AHJR(): array
     {
-        $token = $this->extraerToken();
-        return $this->authService->validarToken($token);
+        $token_AHJR = $this->extraerToken_AHJR();
+        return $this->authService_AHJR->validarToken_AHJR($token_AHJR);
     }
 
     /**
      * 2. Verifica que el usuario tenga un rol específico
      */
-    public function requiereRol(string $rolRequerido): array
+    public function requiereRol_AHJR(string $rolRequerido_AHJR): array
     {
-        $usuario = $this->handle();
+        $usuario_AHJR = $this->handle_AHJR();
 
-        if ($usuario['rol'] !== $rolRequerido && $usuario['rol'] !== 'admin') {
+        if ($usuario_AHJR['rol'] !== $rolRequerido_AHJR && $usuario_AHJR['rol'] !== 'admin') {
             throw new Exception('Acceso denegado. Rol insuficiente.', 403);
         }
 
-        return $usuario;
+        return $usuario_AHJR;
     }
 
     /**
      * 3. Verifica que el usuario tenga uno de varios roles permitidos
      */
-    public function requiereRoles(array $rolesPermitidos): array
+    public function requiereRoles_AHJR(array $rolesPermitidos_AHJR): array
     {
-        $usuario = $this->handle();
+        $usuario_AHJR = $this->handle_AHJR();
 
-        if (!in_array($usuario['rol'], $rolesPermitidos) && $usuario['rol'] !== 'admin') {
+        if (!in_array($usuario_AHJR['rol'], $rolesPermitidos_AHJR) && $usuario_AHJR['rol'] !== 'admin') {
             throw new Exception('Acceso denegado. Rol insuficiente.', 403);
         }
 
-        return $usuario;
+        return $usuario_AHJR;
     }
 
     // ===== MÉTODOS PRIVADOS =====
@@ -65,26 +65,26 @@ class AuthMiddleware
     /**
      * Extrae el token JWT del header Authorization
      */
-    private function extraerToken(): string
+    private function extraerToken_AHJR(): string
     {
         // Compatibilidad CLI y web
         if (!function_exists('getallheaders')) {
-            $headers = [];
-            foreach ($_SERVER as $name => $value) {
-                if (substr($name, 0, 5) == 'HTTP_') {
-                    $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+            $headers_AHJR = [];
+            foreach ($_SERVER as $name_AHJR => $value_AHJR) {
+                if (substr($name_AHJR, 0, 5) == 'HTTP_') {
+                    $headers_AHJR[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name_AHJR, 5)))))] = $value_AHJR;
                 }
             }
         } else {
-            $headers = getallheaders();
+            $headers_AHJR = getallheaders();
         }
 
-        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+        $authHeader_AHJR = $headers_AHJR['Authorization'] ?? $headers_AHJR['authorization'] ?? '';
 
         // 1. Intentar Header Authorization
-        if (!empty($authHeader)) {
-            if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-                return $matches[1];
+        if (!empty($authHeader_AHJR)) {
+            if (preg_match('/Bearer\s+(.*)$/i', $authHeader_AHJR, $matches_AHJR)) {
+                return $matches_AHJR[1];
             }
         }
 

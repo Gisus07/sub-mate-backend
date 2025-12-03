@@ -15,8 +15,8 @@ use RuntimeException;
  */
 class Database
 {
-    private static ?Database $instance = null;
-    private ?PDO $connection = null;
+    private static ?Database $instance_AHJR = null;
+    private ?PDO $connection_AHJR = null;
 
     private function __construct()
     {
@@ -31,34 +31,34 @@ class Database
     /**
      * 1. Obtiene la instancia única (Singleton)
      */
-    public static function getInstance(): self
+    public static function getInstance_AHJR(): self
     {
-        if (self::$instance === null) {
-            self::$instance = new self();
+        if (self::$instance_AHJR === null) {
+            self::$instance_AHJR = new self();
         }
-        return self::$instance;
+        return self::$instance_AHJR;
     }
 
     /**
      * 2. Obtiene la conexión PDO
      */
-    public function getConnection(): PDO
+    public function getConnection_AHJR(): PDO
     {
-        if ($this->connection === null) {
-            $this->connect();
+        if ($this->connection_AHJR === null) {
+            $this->connect_AHJR();
         }
-        return $this->connection;
+        return $this->connection_AHJR;
     }
 
     /**
      * 3. Método estático conveniente para obtener PDO directamente
      */
-    public static function getDB(): PDO
+    public static function getDB_AHJR(): PDO
     {
-        return self::getInstance()->getConnection();
+        return self::getInstance_AHJR()->getConnection_AHJR();
     }
 
-    private function connect(): void
+    private function connect_AHJR(): void
     {
         try {
             $host = Env::get('DB_HOST');
@@ -73,7 +73,7 @@ class Database
 
             $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
 
-            $this->connection = new PDO($dsn, $user, $pass, [
+            $this->connection_AHJR = new PDO($dsn, $user, $pass, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,

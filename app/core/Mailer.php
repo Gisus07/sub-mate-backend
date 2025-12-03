@@ -10,12 +10,12 @@ class Mailer
     /**
      * Función de envío central
      * 
-     * @param string $to Email destinatario
-     * @param string $subject Asunto del correo
-     * @param string $bodyHTML Cuerpo del correo (ya renderizado o HTML puro)
+     * @param string $to_AHJR Email destinatario
+     * @param string $subject_AHJR Asunto del correo
+     * @param string $bodyHTML_AHJR Cuerpo del correo (ya renderizado o HTML puro)
      * @return bool
      */
-    public static function sendEmail(string $to, string $subject, string $bodyHTML): bool
+    public static function sendEmail_AHJR(string $to_AHJR, string $subject_AHJR, string $bodyHTML_AHJR): bool
     {
         if (!class_exists(PHPMailer::class)) {
             error_log('PHPMailer no instalado');
@@ -56,12 +56,12 @@ class Mailer
             }
 
             $mail->setFrom($from, $fromName);
-            $mail->addAddress($to);
+            $mail->addAddress($to_AHJR);
 
             $mail->isHTML(true);
-            $mail->Subject = $subject;
-            $mail->Body = $bodyHTML;
-            $mail->AltBody = strip_tags($bodyHTML);
+            $mail->Subject = $subject_AHJR;
+            $mail->Body = $bodyHTML_AHJR;
+            $mail->AltBody = strip_tags($bodyHTML_AHJR);
 
             return $mail->send();
         } catch (Exception $e) {
@@ -73,13 +73,13 @@ class Mailer
     /**
      * Genera el template HTML responsivo con CSS en línea
      * 
-     * @param string $title Título del mensaje
-     * @param string $message Mensaje principal
-     * @param string|null $ctaContent Texto del botón o llamada a la acción (Opcional)
-     * @param string|null $ctaButtonLink Enlace del botón (Opcional)
+     * @param string $title_AHJR Título del mensaje
+     * @param string $message_AHJR Mensaje principal
+     * @param string|null $ctaContent_AHJR Texto del botón o llamada a la acción (Opcional)
+     * @param string|null $ctaButtonLink_AHJR Enlace del botón (Opcional)
      * @return string HTML completo
      */
-    public static function generarTemplateHTML(string $title, string $message, ?string $ctaContent = null, ?string $ctaButtonLink = null): string
+    public static function generarTemplateHTML_AHJR(string $title_AHJR, string $message_AHJR, ?string $ctaContent_AHJR = null, ?string $ctaButtonLink_AHJR = null): string
     {
         // Paleta de colores SubMate
         $colorPrimary = '#7C3AED';   // Morado
@@ -89,15 +89,15 @@ class Mailer
         $colorText = '#FFFFFF';      // Texto claro
         $colorTextMuted = '#A1A1AA'; // Texto secundario
 
-        $buttonHtml = '';
-        if ($ctaContent) {
-            if ($ctaButtonLink) {
-                $buttonHtml = "
+        $buttonHtml_AHJR = '';
+        if ($ctaContent_AHJR) {
+            if ($ctaButtonLink_AHJR) {
+                $buttonHtml_AHJR = "
                     <table role='presentation' cellpadding='0' cellspacing='0' style='margin-top: 30px;'>
                         <tr>
                             <td align='center' style='border-radius: 8px; background: linear-gradient(90deg, {$colorPrimary} 0%, {$colorAccent} 100%);'>
-                                <a href='{$ctaButtonLink}' target='_blank' style='border: 0; solid {$colorPrimary}; border-radius: 8px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: bold; line-height: 50px; padding: 0 30px; text-align: center; text-decoration: none; -webkit-text-size-adjust: none;'>
-                                    {$ctaContent}
+                                <a href='{$ctaButtonLink_AHJR}' target='_blank' style='border: 0; solid {$colorPrimary}; border-radius: 8px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: bold; line-height: 50px; padding: 0 30px; text-align: center; text-decoration: none; -webkit-text-size-adjust: none;'>
+                                    {$ctaContent_AHJR}
                                 </a>
                             </td>
                         </tr>
@@ -105,9 +105,9 @@ class Mailer
                 ";
             } else {
                 // Si no hay link, el CTA se muestra como texto destacado
-                $buttonHtml = "
+                $buttonHtml_AHJR = "
                     <div style='margin-top: 30px; padding: 15px; background-color: rgba(34, 211, 238, 0.1); border-left: 4px solid {$colorAccent}; color: {$colorAccent}; font-weight: bold;'>
-                        {$ctaContent}
+                        {$ctaContent_AHJR}
                     </div>
                 ";
             }
@@ -119,7 +119,7 @@ class Mailer
         <head>
             <meta charset='UTF-8'>
             <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-            <title>{$title}</title>
+            <title>{$title_AHJR}</title>
             <style>
                 @media only screen and (max-width: 600px) {
                     .main-table { width: 100% !important; }
@@ -153,15 +153,15 @@ class Mailer
                             <tr>
                                 <td class='content-padding' style='padding: 40px;'>
                                     <h2 style='margin: 0 0 20px 0; font-size: 24px; font-weight: 700; color: {$colorText}; text-align: center;'>
-                                        {$title}
+                                        {$title_AHJR}
                                     </h2>
                                     
                                     <div style='font-size: 16px; line-height: 1.6; color: #D4D4D8; text-align: center;'>
-                                        {$message}
+                                        {$message_AHJR}
                                     </div>
 
                                     <div align='center'>
-                                        {$buttonHtml}
+                                        {$buttonHtml_AHJR}
                                     </div>
                                 </td>
                             </tr>
@@ -187,10 +187,10 @@ class Mailer
     /**
      * Mantiene compatibilidad para envío de OTP
      */
-    public static function sendOTP_ahjr(string $to, string $otp, string $subject = "Código de Verificación")
+    public static function sendOTP_ahjr(string $to_AHJR, string $otp_AHJR, string $subject_AHJR = "Código de Verificación")
     {
-        $message = "Utiliza el siguiente código para verificar tu identidad. Este código expirará en 15 minutos.";
-        $html = self::generarTemplateHTML($subject, $message, $otp, null);
-        return self::sendEmail($to, $subject, $html);
+        $message_AHJR = "Utiliza el siguiente código para verificar tu identidad. Este código expirará en 15 minutos.";
+        $html_AHJR = self::generarTemplateHTML_AHJR($subject_AHJR, $message_AHJR, $otp_AHJR, null);
+        return self::sendEmail_AHJR($to_AHJR, $subject_AHJR, $html_AHJR);
     }
 }

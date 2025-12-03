@@ -6,6 +6,7 @@ namespace App\controllers;
 
 use App\services\AuthService;
 use App\services\UsuarioService;
+use App\services\AlertsService;
 use App\core\Response;
 use Exception;
 
@@ -16,43 +17,43 @@ use Exception;
  */
 class AuthController
 {
-    private AuthService $authService;
-    private UsuarioService $usuarioService;
+    private AuthService $authService_AHJR;
+    private UsuarioService $usuarioService_AHJR;
 
     public function __construct()
     {
-        $this->authService = new AuthService();
-        $this->usuarioService = new UsuarioService();
+        $this->authService_AHJR = new AuthService();
+        $this->usuarioService_AHJR = new UsuarioService();
     }
 
     /**
      * POST /api/auth/register
      * Registro de nuevo usuario
      */
-    public function register(): void
+    public function register_ahjr(): void
     {
         try {
-            $input = $this->leerJSON();
+            $input_AHJR = $this->leerJSON_AHJR();
 
             // Validar campos requeridos
-            $requeridos = ['nombre', 'apellido', 'email', 'clave'];
-            foreach ($requeridos as $campo) {
-                if (empty($input[$campo])) {
+            $requeridos_AHJR = ['nombre', 'apellido', 'email', 'clave'];
+            foreach ($requeridos_AHJR as $campo_AHJR) {
+                if (empty($input_AHJR[$campo_AHJR])) {
                     Response::badRequest_ahjr('Campos incompletos.');
                 }
             }
 
             // Validar email
-            if (!filter_var($input['email'], FILTER_VALIDATE_EMAIL)) {
+            if (!filter_var($input_AHJR['email'], FILTER_VALIDATE_EMAIL)) {
                 Response::badRequest_ahjr('Email inválido.');
             }
 
-            $resultado = $this->authService->registrarUsuario($input);
+            $resultado_AHJR = $this->authService_AHJR->registrarUsuario_AHJR($input_AHJR);
 
-            Response::ok_ahjr($resultado);
+            Response::ok_ahjr($resultado_AHJR);
         } catch (Exception $e) {
-            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-            Response::json_ahjr(['message' => $e->getMessage()], $status);
+            $status_AHJR = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status_AHJR);
         }
     }
 
@@ -60,21 +61,30 @@ class AuthController
      * POST /api/auth/register-verify
      * Verificar OTP y activar cuenta
      */
-    public function verifyOTP(): void
+    public function verifyOTP_ahjr(): void
     {
         try {
-            $input = $this->leerJSON();
+            $input_AHJR = $this->leerJSON_AHJR();
 
-            if (empty($input['email']) || empty($input['otp'])) {
+            if (empty($input_AHJR['email']) || empty($input_AHJR['otp'])) {
                 Response::badRequest_ahjr('Email y OTP requeridos.');
             }
 
-            $resultado = $this->authService->verificarYActivar($input['email'], $input['otp']);
+            $resultado_AHJR = $this->authService_AHJR->verificarYActivar_AHJR($input_AHJR['email'], $input_AHJR['otp']);
 
-            Response::json_ahjr($resultado, 201);
+            // Enviar email de bienvenida
+            try {
+                $alertsService_AHJR = new AlertsService();
+                $alertsService_AHJR->enviarRegistroExitoso_AHJR(['email' => $input_AHJR['email'], 'nombre' => 'Usuario']);
+            } catch (Exception $e) {
+                // No bloquear el flujo si falla el correo
+                error_log("Error enviando email de bienvenida: " . $e->getMessage());
+            }
+
+            Response::json_ahjr($resultado_AHJR, 201);
         } catch (Exception $e) {
-            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-            Response::json_ahjr(['message' => $e->getMessage()], $status);
+            $status_AHJR = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status_AHJR);
         }
     }
 
@@ -83,26 +93,26 @@ class AuthController
      * Inicio de sesión
      * CRÍTICO: Devuelve usuario con campo 'rol'
      */
-    public function login(): void
+    public function login_ahjr(): void
     {
         try {
-            $input = $this->leerJSON();
+            $input_AHJR = $this->leerJSON_AHJR();
 
-            if (empty($input['email']) || empty($input['clave'])) {
+            if (empty($input_AHJR['email']) || empty($input_AHJR['clave'])) {
                 Response::badRequest_ahjr('Email y contraseña requeridos.');
             }
 
-            $resultado = $this->authService->login($input['email'], $input['clave']);
+            $resultado_AHJR = $this->authService_AHJR->login_AHJR($input_AHJR['email'], $input_AHJR['clave']);
 
             // Resultado incluye: { "usuario": {..., "rol": "beta"}, "token": "..." }
             Response::ok_ahjr([
                 'message' => 'Login exitoso.',
-                'usuario' => $resultado['usuario'],
-                'token' => $resultado['token']
+                'usuario' => $resultado_AHJR['usuario'],
+                'token' => $resultado_AHJR['token']
             ]);
         } catch (Exception $e) {
-            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-            Response::json_ahjr(['message' => $e->getMessage()], $status);
+            $status_AHJR = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status_AHJR);
         }
     }
 
@@ -110,10 +120,10 @@ class AuthController
      * POST /api/auth/logout
      * Cerrar sesión y limpiar cookie
      */
-    public function logout(): void
+    public function logout_ahjr(): void
     {
         // Limpiar cookie
-        $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+        $secure_AHJR = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
         setcookie(
             'sm_session',
             '',
@@ -121,7 +131,7 @@ class AuthController
                 'expires' => time() - 3600,
                 'path' => '/',
                 'domain' => '',
-                'secure' => $secure,
+                'secure' => $secure_AHJR,
                 'httponly' => true,
                 'samesite' => 'Lax'
             ]
@@ -134,21 +144,21 @@ class AuthController
      * POST /api/auth/password-reset
      * Solicitar reset de contraseña
      */
-    public function passwordReset(): void
+    public function passwordReset_ahjr(): void
     {
         try {
-            $input = $this->leerJSON();
+            $input_AHJR = $this->leerJSON_AHJR();
 
-            if (empty($input['email'])) {
+            if (empty($input_AHJR['email'])) {
                 Response::badRequest_ahjr('Email requerido.');
             }
 
-            $resultado = $this->authService->solicitarResetPassword($input['email']);
+            $resultado_AHJR = $this->authService_AHJR->solicitarResetPassword_AHJR($input_AHJR['email']);
 
-            Response::ok_ahjr($resultado);
+            Response::ok_ahjr($resultado_AHJR);
         } catch (Exception $e) {
-            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-            Response::json_ahjr(['message' => $e->getMessage()], $status);
+            $status_AHJR = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status_AHJR);
         }
     }
 
@@ -156,21 +166,21 @@ class AuthController
      * POST /api/auth/password-reset-verify
      * Verificar código y cambiar contraseña
      */
-    public function passwordResetVerify(): void
+    public function passwordResetVerify_ahjr(): void
     {
         try {
-            $input = $this->leerJSON();
+            $input_AHJR = $this->leerJSON_AHJR();
 
-            if (empty($input['email']) || empty($input['otp']) || empty($input['clave'])) {
+            if (empty($input_AHJR['email']) || empty($input_AHJR['otp']) || empty($input_AHJR['clave'])) {
                 Response::badRequest_ahjr('Email, OTP y nueva clave requeridos.');
             }
 
-            $resultado = $this->authService->verificarResetPassword($input['email'], $input['otp'], $input['clave']);
+            $resultado_AHJR = $this->authService_AHJR->verificarResetPassword_AHJR($input_AHJR['email'], $input_AHJR['otp'], $input_AHJR['clave']);
 
-            Response::ok_ahjr($resultado);
+            Response::ok_ahjr($resultado_AHJR);
         } catch (Exception $e) {
-            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-            Response::json_ahjr(['message' => $e->getMessage()], $status);
+            $status_AHJR = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status_AHJR);
         }
     }
 
@@ -178,24 +188,24 @@ class AuthController
      * GET /api/auth/me
      * Obtiene usuario autenticado desde token
      */
-    public function me(): void
+    public function me_ahjr(): void
     {
         try {
-            $token = $this->extraerToken();
-            $payload = $this->authService->validarToken($token);
+            $token_AHJR = $this->extraerToken_AHJR();
+            $payload_AHJR = $this->authService_AHJR->validarToken_AHJR($token_AHJR);
 
             // Obtener perfil completo desde DB
-            $usuarioCompleto = $this->usuarioService->obtenerPerfil($payload['sub']);
+            $usuarioCompleto_AHJR = $this->usuarioService_AHJR->obtenerPerfil_AHJR($payload_AHJR['sub']);
 
             Response::ok_ahjr([
                 'data' => [
-                    'usuario' => $usuarioCompleto,
-                    'token' => $token
+                    'usuario' => $usuarioCompleto_AHJR,
+                    'token' => $token_AHJR
                 ]
             ]);
         } catch (Exception $e) {
-            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-            Response::json_ahjr(['message' => $e->getMessage()], $status);
+            $status_AHJR = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status_AHJR);
         }
     }
 
@@ -204,27 +214,27 @@ class AuthController
      * Verifica si un correo electrónico está disponible
      * UX Check: Llamado por el Frontend al salir del campo email
      */
-    public function checkEmailAvailability(): void
+    public function checkEmailAvailability_ahjr(): void
     {
         try {
             // Obtener email de los parámetros de la URL
-            $email = $_GET['email'] ?? '';
+            $email_AHJR = $_GET['email'] ?? '';
 
             // Validar que el email no esté vacío
-            if (empty($email)) {
+            if (empty($email_AHJR)) {
                 Response::badRequest_ahjr('Email es requerido.');
             }
 
             // Validar formato de email
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            if (!filter_var($email_AHJR, FILTER_VALIDATE_EMAIL)) {
                 Response::badRequest_ahjr('Formato de email inválido.');
             }
 
             // Verificar si el email ya existe
-            $usuarioModel = new \App\models\UsuarioModel();
-            $existe = $usuarioModel->existeEmail($email);
+            $usuarioModel_AHJR = new \App\models\UsuarioModel();
+            $existe_AHJR = $usuarioModel_AHJR->existeEmail_AHJR($email_AHJR);
 
-            if ($existe) {
+            if ($existe_AHJR) {
                 // Email NO disponible - 409 Conflict
                 Response::json_ahjr([
                     'available' => false,
@@ -238,27 +248,27 @@ class AuthController
                 ]);
             }
         } catch (Exception $e) {
-            $status = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-            Response::json_ahjr(['message' => $e->getMessage()], $status);
+            $status_AHJR = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            Response::json_ahjr(['message' => $e->getMessage()], $status_AHJR);
         }
     }
 
     // ===== HELPERS PRIVADOS =====
 
-    private function leerJSON(): array
+    private function leerJSON_AHJR(): array
     {
-        $json = file_get_contents('php://input');
-        return json_decode($json, true) ?? [];
+        $json_AHJR = file_get_contents('php://input');
+        return json_decode($json_AHJR, true) ?? [];
     }
 
-    private function extraerToken(): string
+    private function extraerToken_AHJR(): string
     {
-        $headers = getallheaders();
-        $auth = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+        $headers_AHJR = getallheaders();
+        $auth_AHJR = $headers_AHJR['Authorization'] ?? $headers_AHJR['authorization'] ?? '';
 
         // 1. Intentar Header
-        if (preg_match('/Bearer\s+(.*)$/i', $auth, $matches)) {
-            return $matches[1];
+        if (preg_match('/Bearer\s+(.*)$/i', $auth_AHJR, $matches_AHJR)) {
+            return $matches_AHJR[1];
         }
 
         // 2. Intentar Cookie

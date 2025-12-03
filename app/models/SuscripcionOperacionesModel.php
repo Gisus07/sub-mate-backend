@@ -14,11 +14,11 @@ use PDO;
  */
 class SuscripcionOperacionesModel
 {
-    private PDO $db;
+    private PDO $db_AHJR;
 
     public function __construct()
     {
-        $this->db = Database::getDB();
+        $this->db_AHJR = Database::getDB_AHJR();
     }
 
     /**
@@ -26,74 +26,74 @@ class SuscripcionOperacionesModel
      * 
      * @return array|bool Retorna datos actualizados o false
      */
-    public function cambiarEstado(int $id, string $estado, int $uid, ?string $frecuenciaElegida = null, ?int $diaCobro = null, ?int $mesCobro = null, ?float $costo = null)
+    public function cambiarEstado_AHJR(int $id_AHJR, string $estado_AHJR, int $uid_AHJR, ?string $frecuenciaElegida_AHJR = null, ?int $diaCobro_AHJR = null, ?int $mesCobro_AHJR = null, ?float $costo_AHJR = null)
     {
-        $estado = strtolower($estado);
+        $estado_AHJR = strtolower($estado_AHJR);
 
-        if ($estado === 'inactiva' || $estado === 'inactivo') {
+        if ($estado_AHJR === 'inactiva' || $estado_AHJR === 'inactivo') {
             // Lógica DESACTIVACIÓN: Sanitizar fechas y ciclo
-            $sql = "UPDATE td_suscripciones_ahjr 
+            $sql_AHJR = "UPDATE td_suscripciones_ahjr 
                     SET estado_ahjr = 'inactiva',
                         fecha_proximo_pago_ahjr = NULL,
                         dia_cobro_ahjr = NULL,
                         mes_cobro_ahjr = NULL
                     WHERE id_suscripcion_ahjr = :id AND id_usuario_suscripcion_ahjr = :uid";
-            $stmt = $this->db->prepare($sql);
-            if ($stmt->execute(['id' => $id, 'uid' => $uid])) {
-                return $this->obtenerDatosActualizados($id, $uid);
+            $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
+            if ($stmt_AHJR->execute(['id' => $id_AHJR, 'uid' => $uid_AHJR])) {
+                return $this->obtenerDatosActualizados_AHJR($id_AHJR, $uid_AHJR);
             }
             return false;
-        } elseif ($estado === 'activa' || $estado === 'activo') {
+        } elseif ($estado_AHJR === 'activa' || $estado_AHJR === 'activo') {
             // Lógica REACTIVACIÓN
 
             // 1. Obtener datos actuales
-            $stmtInfo = $this->db->prepare("SELECT frecuencia_ahjr, costo_ahjr FROM td_suscripciones_ahjr WHERE id_suscripcion_ahjr = :id AND id_usuario_suscripcion_ahjr = :uid");
-            $stmtInfo->execute(['id' => $id, 'uid' => $uid]);
-            $info = $stmtInfo->fetch();
+            $stmtInfo_AHJR = $this->db_AHJR->prepare("SELECT frecuencia_ahjr, costo_ahjr FROM td_suscripciones_ahjr WHERE id_suscripcion_ahjr = :id AND id_usuario_suscripcion_ahjr = :uid");
+            $stmtInfo_AHJR->execute(['id' => $id_AHJR, 'uid' => $uid_AHJR]);
+            $info_AHJR = $stmtInfo_AHJR->fetch();
 
-            if (!$info) return false;
+            if (!$info_AHJR) return false;
 
             // 2. Determinar frecuencia final
-            $frecuenciaFinal = $frecuenciaElegida ?? $info['frecuencia_ahjr'];
+            $frecuenciaFinal_AHJR = $frecuenciaElegida_AHJR ?? $info_AHJR['frecuencia_ahjr'];
 
             // 3. Usar día/mes proporcionados (deben ser HOY por regla de negocio)
-            if ($diaCobro === null) {
-                $diaCobro = (int)date('d');
+            if ($diaCobro_AHJR === null) {
+                $diaCobro_AHJR = (int)date('d');
             }
 
             // 4. Determinar costo final (si se pasa null, mantiene el actual)
-            $costoFinal = $costo ?? (float)$info['costo_ahjr'];
+            $costoFinal_AHJR = $costo_AHJR ?? (float)$info_AHJR['costo_ahjr'];
 
             // 5. Calcular fechas (Delegado a MySQL para precisión en días 29, 30, 31)
-            $fechaUltimoPago = date('Y-m-d'); // Hoy
+            $fechaUltimoPago_AHJR = date('Y-m-d'); // Hoy
 
             // 6. Actualizar con nuevos ciclos y costo
             // Usamos DATE_ADD de MySQL que maneja correctamente el desbordamiento de meses
             // Ejemplo: 31 Enero + 1 Mes = 28/29 Febrero (automático en MySQL)
-            $intervalo = ($frecuenciaFinal === 'mensual') ? '1 MONTH' : '1 YEAR';
+            $intervalo_AHJR = ($frecuenciaFinal_AHJR === 'mensual') ? '1 MONTH' : '1 YEAR';
 
-            $sql = "UPDATE td_suscripciones_ahjr 
+            $sql_AHJR = "UPDATE td_suscripciones_ahjr 
                     SET estado_ahjr = 'activa',
                         frecuencia_ahjr = :frecuencia,
                         costo_ahjr = :costo,
                         fecha_ultimo_pago_ahjr = :ultimo,
-                        fecha_proximo_pago_ahjr = DATE_ADD(:ultimo_calc, INTERVAL $intervalo), 
+                        fecha_proximo_pago_ahjr = DATE_ADD(:ultimo_calc, INTERVAL $intervalo_AHJR), 
                         dia_cobro_ahjr = :dia,
                         mes_cobro_ahjr = :mes
                     WHERE id_suscripcion_ahjr = :id AND id_usuario_suscripcion_ahjr = :uid";
 
-            $stmt = $this->db->prepare($sql);
-            if ($stmt->execute([
-                'frecuencia' => $frecuenciaFinal,
-                'costo' => $costoFinal,
-                'ultimo' => $fechaUltimoPago,
-                'ultimo_calc' => $fechaUltimoPago, // Se pasa dos veces, una para el campo y otra para el cálculo
-                'dia' => $diaCobro,
-                'mes' => $mesCobro,
-                'id' => $id,
-                'uid' => $uid
+            $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
+            if ($stmt_AHJR->execute([
+                'frecuencia' => $frecuenciaFinal_AHJR,
+                'costo' => $costoFinal_AHJR,
+                'ultimo' => $fechaUltimoPago_AHJR,
+                'ultimo_calc' => $fechaUltimoPago_AHJR, // Se pasa dos veces, una para el campo y otra para el cálculo
+                'dia' => $diaCobro_AHJR,
+                'mes' => $mesCobro_AHJR,
+                'id' => $id_AHJR,
+                'uid' => $uid_AHJR
             ])) {
-                return $this->obtenerDatosActualizados($id, $uid);
+                return $this->obtenerDatosActualizados_AHJR($id_AHJR, $uid_AHJR);
             }
         }
 
@@ -103,56 +103,56 @@ class SuscripcionOperacionesModel
     // Método calcularProximaFecha eliminado ya que la lógica se movió a MySQL
 
 
-    private function obtenerDatosActualizados(int $id, int $uid): array
+    private function obtenerDatosActualizados_AHJR(int $id_AHJR, int $uid_AHJR): array
     {
-        $sql = "SELECT *, DATEDIFF(fecha_proximo_pago_ahjr, CURDATE()) as dias_restantes_ahjr 
+        $sql_AHJR = "SELECT *, DATEDIFF(fecha_proximo_pago_ahjr, CURDATE()) as dias_restantes_ahjr 
                 FROM td_suscripciones_ahjr 
                 WHERE id_suscripcion_ahjr = :id AND id_usuario_suscripcion_ahjr = :uid";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['id' => $id, 'uid' => $uid]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
+        $stmt_AHJR->execute(['id' => $id_AHJR, 'uid' => $uid_AHJR]);
+        return $stmt_AHJR->fetch(PDO::FETCH_ASSOC);
     }
 
     /**
      * 2. Registra pago simulado con transacción
      */
-    public function registrarPagoSimulado(int $id, float $monto, string $metodo, string $frecuencia): bool
+    public function registrarPagoSimulado_AHJR(int $id_AHJR, float $monto_AHJR, string $metodo_AHJR, string $frecuencia_AHJR): bool
     {
         try {
-            $this->db->beginTransaction();
+            $this->db_AHJR->beginTransaction();
 
             // Calcular intervalo según frecuencia
-            $intervalo = $frecuencia === 'mensual' ? '1 MONTH' : '1 YEAR';
+            $intervalo_AHJR = $frecuencia_AHJR === 'mensual' ? '1 MONTH' : '1 YEAR';
 
             // Actualizar fecha de último pago a HOY y calcular próximo pago
-            $sqlUpdate = "UPDATE td_suscripciones_ahjr 
+            $sqlUpdate_AHJR = "UPDATE td_suscripciones_ahjr 
                           SET fecha_ultimo_pago_ahjr = CURDATE(),
-                              fecha_proximo_pago_ahjr = DATE_ADD(CURDATE(), INTERVAL {$intervalo})
+                              fecha_proximo_pago_ahjr = DATE_ADD(CURDATE(), INTERVAL {$intervalo_AHJR})
                           WHERE id_suscripcion_ahjr = :id";
 
-            $stmtUpdate = $this->db->prepare($sqlUpdate);
-            $stmtUpdate->execute(['id' => $id]);
+            $stmtUpdate_AHJR = $this->db_AHJR->prepare($sqlUpdate_AHJR);
+            $stmtUpdate_AHJR->execute(['id' => $id_AHJR]);
 
             // Obtener fecha de pago (HOY) para el historial
-            $nuevaFecha = date('Y-m-d');
+            $nuevaFecha_AHJR = date('Y-m-d');
 
             // Insertar en historial
-            $sqlHistorial = "INSERT INTO td_historial_pagos_ahjr 
+            $sqlHistorial_AHJR = "INSERT INTO td_historial_pagos_ahjr 
                              (id_suscripcion_historial_ahjr, monto_pagado_ahjr, fecha_pago_ahjr, metodo_pago_snapshot_ahjr)
                              VALUES (:id, :monto, :fecha, :metodo)";
 
-            $stmtHistorial = $this->db->prepare($sqlHistorial);
-            $stmtHistorial->execute([
-                'id' => $id,
-                'monto' => $monto,
-                'fecha' => $nuevaFecha,
-                'metodo' => $metodo
+            $stmtHistorial_AHJR = $this->db_AHJR->prepare($sqlHistorial_AHJR);
+            $stmtHistorial_AHJR->execute([
+                'id' => $id_AHJR,
+                'monto' => $monto_AHJR,
+                'fecha' => $nuevaFecha_AHJR,
+                'metodo' => $metodo_AHJR
             ]);
 
-            $this->db->commit();
+            $this->db_AHJR->commit();
             return true;
         } catch (\Exception $e) {
-            $this->db->rollBack();
+            $this->db_AHJR->rollBack();
             throw $e;
         }
     }
@@ -160,18 +160,18 @@ class SuscripcionOperacionesModel
     /**
      * 3. Registra pago histórico manual (para creación de suscripción)
      */
-    public function registrarPagoHistoricoManual(int $id, float $monto, string $fecha, string $metodo): bool
+    public function registrarPagoHistoricoManual_AHJR(int $id_AHJR, float $monto_AHJR, string $fecha_AHJR, string $metodo_AHJR): bool
     {
-        $sql = "INSERT INTO td_historial_pagos_ahjr 
+        $sql_AHJR = "INSERT INTO td_historial_pagos_ahjr 
                 (id_suscripcion_historial_ahjr, monto_pagado_ahjr, fecha_pago_ahjr, metodo_pago_snapshot_ahjr)
                 VALUES (:id, :monto, :fecha, :metodo)";
 
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute([
-            'id' => $id,
-            'monto' => $monto,
-            'fecha' => $fecha,
-            'metodo' => $metodo
+        $stmt_AHJR = $this->db_AHJR->prepare($sql_AHJR);
+        return $stmt_AHJR->execute([
+            'id' => $id_AHJR,
+            'monto' => $monto_AHJR,
+            'fecha' => $fecha_AHJR,
+            'metodo' => $metodo_AHJR
         ]);
     }
 }

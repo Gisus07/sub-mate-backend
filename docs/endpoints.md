@@ -309,6 +309,45 @@ Actualiza el perfil.
 
 ---
 
+### PATCH `/api/perfil/password`
+
+Cambia la contraseña del usuario autenticado.
+
+**Headers:** `Authorization: Bearer {token}`
+
+**Request Body:**
+
+```json
+{
+  "clave_actual": "MiPassword123!",
+  "clave_nueva": "NuevaPassword456!"
+}
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "Contraseña actualizada correctamente.",
+  "data": null
+}
+```
+
+**Error Response:** `401 Unauthorized` (contraseña actual incorrecta)
+
+```json
+{
+  "status": 401,
+  "success": false,
+  "message": "La contraseña actual es incorrecta.",
+  "data": null
+}
+```
+
+---
+
 ### DELETE `/api/perfil`
 
 Elimina la cuenta.
@@ -681,3 +720,36 @@ Obtiene datos resumidos para la vista de inicio (Home), enfocada en urgencia fin
 >
 > - **Semáforo:** Indicadores rápidos de salud financiera. `gasto_7_dias` es la suma de pagos programados para la próxima semana.
 > - **Gasto Semanal:** Distribución del gasto proyectado para el mes actual, dividido en 4 semanas.
+
+---
+
+## Módulo: Contacto
+
+### POST `/api/contacto`
+
+Envía un mensaje de contacto y confirmación por correo. **Público** (No requiere Auth).
+
+**Request Body:**
+
+```json
+{
+  "nombre": "Juan Pérez",
+  "email": "juan@example.com",
+  "telefono": "+52 55 1234 5678",
+  "asunto": "consulta",
+  "mensaje": "Hola, tengo una duda sobre..."
+}
+```
+
+> **Valores permitidos para `asunto`:** `consulta`, `propuesta`, `soporte`.
+
+**Response:** `200 OK`
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "Mensaje enviado con éxito. Te responderemos pronto.",
+  "data": true
+}
+```
