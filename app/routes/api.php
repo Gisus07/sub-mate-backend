@@ -274,3 +274,8 @@ $router_ahjr->add_ahjr('POST', '/api/debug/run-worker', function () {
 $router_ahjr->add_ahjr('POST', '/api/debug/test-email', function () use ($debugController) {
     $debugController->testEmail();
 });
+
+// GET /api/debug/smtp-config - Ver configuración SMTP actual (sin secretos)
+$router_ahjr->add_ahjr('GET', '/api/debug/smtp-config', function () use ($debugController) {
+    $debugController->smtpConfig();
+});

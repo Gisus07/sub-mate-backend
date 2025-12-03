@@ -77,6 +77,7 @@ class Mailer
             $timeout = Env::get('SMTP_TIMEOUT');
             if ($timeout) {
                 $mail->Timeout = (int)$timeout;
+                @ini_set('default_socket_timeout', (string)(int)$timeout);
             }
 
             $skipVerify = Env::get('SMTP_SKIP_TLS_VERIFY');

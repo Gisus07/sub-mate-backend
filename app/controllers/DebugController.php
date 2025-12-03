@@ -84,4 +84,29 @@ class DebugController
             Response::serverError_ahjr('Error al procesar el envío: ' . $e->getMessage());
         }
     }
+
+    public function smtpConfig(): void
+    {
+        $host = Env::get('SMTP_HOST') ?? Env::get('MAIL_HOST');
+        $port = Env::get('SMTP_PORT') ?? Env::get('MAIL_PORT');
+        $secure = Env::get('SMTP_SECURE') ?? Env::get('MAIL_ENCRYPTION');
+        $from = Env::get('SMTP_FROM') ?? Env::get('MAIL_FROM');
+        $fromName = Env::get('SMTP_FROM_NAME') ?? Env::get('MAIL_FROM_NAME');
+        $debug = Env::get('SMTP_DEBUG');
+        $skipVerify = Env::get('SMTP_SKIP_TLS_VERIFY');
+        $timeout = Env::get('SMTP_TIMEOUT');
+
+        Response::ok_ahjr([
+            'smtp' => [
+                'host' => $host,
+                'port' => $port,
+                'secure' => $secure,
+                'from' => $from,
+                'from_name' => $fromName,
+                'debug' => $debug,
+                'skip_tls_verify' => $skipVerify,
+                'timeout' => $timeout,
+            ],
+        ]);
+    }
 }
